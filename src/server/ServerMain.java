@@ -1,5 +1,6 @@
 package server;
 
+import common.MessageReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -8,6 +9,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 public class ServerMain {
@@ -56,18 +58,16 @@ public class ServerMain {
                             key.cancel();
                             client.close();
                         } else {
-                            // REGOLA D'ORO DEL BUFFER: flip() prima di leggere i dati!
-                            session.buffer.flip();
-
-                            // Estraiamo i byte e li stampiamo come Stringa
-                            byte[] data = new byte[session.buffer.limit()];
-                            session.buffer.get(data);
-                            String messaggio = new String(data, "UTF-8").trim();
-
-                            System.out.println("Ricevuto: " + messaggio);
-
-                            // Svuotiamo il buffer per la prossima lettura
-                            session.buffer.clear();
+                            List<String> messaggi = MessageReader.extractMessage(session.buffer);
+                            for (int i = 0; i < messaggi.size(); i++) {
+                                System.out.println("Ricevuto JSON completo: " + messaggi);
+                                String risposta = new String("ECHO: " + messaggi + "\n");
+                                byte[] bytes = risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                                ByteBuffer outBuf = ByteBuffer.wrap(bytes);
+                                while (outBuf.hasRemaining()) {
+                                    client.write(outBuf);
+                                }
+                            }
                         }
                     }
                 } catch (IOException e) {
