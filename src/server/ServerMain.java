@@ -11,6 +11,10 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ServerMain {
     public static void main(String[] args) throws IOException {
@@ -21,6 +25,16 @@ public class ServerMain {
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server NIO in ascolto sulla porta 8080...");
 
+        ExecutorService pool = Executors.newFixedThreadPool(10);
+        ScheduledExecutorService timedSaves = Executors.newSingleThreadScheduledExecutor();
+
+        Runnable saves = new Runnable() {
+            @Override
+            public void run(){
+                System.out.println("--- SALVATAGGIO DATI PERIODICO IN CORSO... ---");
+            }
+        };
+        timedSaves.scheduleAtFixedRate(saves, 0, 10, TimeUnit.SECONDS);
         while (true) {
             selector.select();
             Set<SelectionKey> readyKeys = selector.selectedKeys();
@@ -59,14 +73,25 @@ public class ServerMain {
                             client.close();
                         } else {
                             List<String> messaggi = MessageReader.extractMessage(session.buffer);
-                            for (int i = 0; i < messaggi.size(); i++) {
-                                System.out.println("Ricevuto JSON completo: " + messaggi);
-                                String risposta = new String("ECHO: " + messaggi + "\n");
-                                byte[] bytes = risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                                ByteBuffer outBuf = ByteBuffer.wrap(bytes);
-                                while (outBuf.hasRemaining()) {
-                                    client.write(outBuf);
-                                }
+                            for (String messaggio : messaggi) {
+
+                                Runnable task = new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        System.out.println("Ricevuto JSON completo: " + messaggio);
+                                        String risposta = "ECHO: " + messaggio + "\n";
+                                        byte[] bytes = risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                                        ByteBuffer outBuf = ByteBuffer.wrap(bytes);
+                                        while (outBuf.hasRemaining()) {
+                                            try {
+                                                client.write(outBuf);
+                                            } catch (Exception e) {
+                                                System.out.println(e);
+                                            }
+                                        }
+                                    }
+                                };
+                                pool.execute(task);
                             }
                         }
                     }
