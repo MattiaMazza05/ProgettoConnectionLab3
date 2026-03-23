@@ -1,6 +1,8 @@
 package server;
 
 import common.MessageReader;
+import common.UserManager;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -16,8 +18,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 public class ServerMain {
     public static void main(String[] args) throws IOException {
+        UserManager userManager = new UserManager();
+        userManager.load();
         Selector selector = Selector.open();
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(false);
@@ -30,11 +37,12 @@ public class ServerMain {
 
         Runnable saves = new Runnable() {
             @Override
-            public void run(){
-                System.out.println("--- SALVATAGGIO DATI PERIODICO IN CORSO... ---");
+            public void run() {
+                userManager.save();
             }
         };
         timedSaves.scheduleAtFixedRate(saves, 0, 10, TimeUnit.SECONDS);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> userManager.save()));
         while (true) {
             selector.select();
             Set<SelectionKey> readyKeys = selector.selectedKeys();
@@ -74,19 +82,34 @@ public class ServerMain {
                         } else {
                             List<String> messaggi = MessageReader.extractMessage(session.buffer);
                             for (String messaggio : messaggi) {
-
                                 Runnable task = new Runnable() {
                                     @Override
                                     public void run() {
                                         System.out.println("Ricevuto JSON completo: " + messaggio);
-                                        String risposta = "ECHO: " + messaggio + "\n";
-                                        byte[] bytes = risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                                        ByteBuffer outBuf = ByteBuffer.wrap(bytes);
-                                        while (outBuf.hasRemaining()) {
-                                            try {
-                                                client.write(outBuf);
-                                            } catch (Exception e) {
-                                                System.out.println(e);
+                                        JsonObject request = JsonParser.parseString(messaggio).getAsJsonObject();
+                                        String operation = request.get("operation").getAsString();
+                                        ByteBuffer outBuf;
+                                        if (operation.equals("register")) {
+                                            String username = request.get("username").getAsString();
+                                            String password = request.get("password").getAsString();
+                                            boolean statusRegistered = userManager.register(username, password);
+                                            JsonObject answer = new JsonObject();
+                                            if (statusRegistered) {
+                                                answer.addProperty("status", "ok");
+                                                answer.addProperty("message", "Registrazione avvenuta con successo.");
+                                            } else {
+                                                answer.addProperty("status", "error");
+                                                answer.addProperty("message", "Utente già esistente.");
+                                            }
+                                            String risposta = answer.toString() + "\n";
+                                            byte[] bytes = risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                                            outBuf = ByteBuffer.wrap(bytes);
+                                            while (outBuf.hasRemaining()) {
+                                                try {
+                                                    client.write(outBuf);
+                                                } catch (Exception e) {
+                                                    System.out.println(e);
+                                                }
                                             }
                                         }
                                     }
