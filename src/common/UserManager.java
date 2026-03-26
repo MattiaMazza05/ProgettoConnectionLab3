@@ -8,7 +8,7 @@ import server.ClientSession;
 
 import java.util.Set;
 
-public class UserManager {
+public class UserManager { //classe per la gestione degli utenti e autenticazione 
     public ConcurrentHashMap<String, UserData> users = new ConcurrentHashMap<>();
     private final Set<String> loggedIn = ConcurrentHashMap.newKeySet();
 

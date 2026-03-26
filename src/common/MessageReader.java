@@ -5,12 +5,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MessageReader {
+public class MessageReader { //parser per i messaggi 
     public static List<String> extractMessage(ByteBuffer buf) throws IOException {
         buf.flip();
         List<String> lista = new ArrayList<>();
         int start = 0;
-        // byte[] bufByte = new byte[];
         while (buf.hasRemaining()) {
             if (buf.get() == '\n') {
                 int finalPosition = buf.position() - 1;

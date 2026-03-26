@@ -5,10 +5,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import java.lang.reflect.Type;
 
-public class JsonPersistence {
+public class JsonPersistence { //salvataggio dati su file json
     public static synchronized void writeJson(String filePath, Object data) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create(); //metto setPrettyPrinting per avere il file users.json ben formattato
         String json = gson.toJson(data);

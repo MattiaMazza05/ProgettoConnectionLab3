@@ -1,6 +1,6 @@
 package common;
 
-public class UserData {
+public class UserData { //formato dati utente
     public String username;
     public String password;
 
