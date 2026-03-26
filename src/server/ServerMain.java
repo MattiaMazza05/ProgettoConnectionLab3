@@ -1,8 +1,8 @@
 package server;
 
 import common.MessageReader;
+import common.ServerResponse;
 import common.UserManager;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -17,7 +17,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -72,45 +71,79 @@ public class ServerMain {
                         ClientSession session = (ClientSession) key.attachment();
 
                         // Leggiamo i dati dal canale e li mettiamo nel buffer del client
-                        int bytesRead = client.read(session.buffer);
+                        int bytesRead = client.read(session.readBuffer);
 
                         if (bytesRead == -1) {
                             // Il client ha chiuso la connessione
                             System.out.println("Client disconnesso.");
+                            userManager.logout(session);
                             key.cancel();
                             client.close();
                         } else {
-                            List<String> messaggi = MessageReader.extractMessage(session.buffer);
+                            List<String> messaggi = MessageReader.extractMessage(session.readBuffer);
                             for (String messaggio : messaggi) {
                                 Runnable task = new Runnable() {
                                     @Override
                                     public void run() {
-                                        System.out.println("Ricevuto JSON completo: " + messaggio);
-                                        JsonObject request = JsonParser.parseString(messaggio).getAsJsonObject();
-                                        String operation = request.get("operation").getAsString();
-                                        ByteBuffer outBuf;
-                                        if (operation.equals("register")) {
-                                            String username = request.get("username").getAsString();
-                                            String password = request.get("password").getAsString();
-                                            boolean statusRegistered = userManager.register(username, password);
-                                            JsonObject answer = new JsonObject();
-                                            if (statusRegistered) {
-                                                answer.addProperty("status", "ok");
-                                                answer.addProperty("message", "Registrazione avvenuta con successo.");
-                                            } else {
-                                                answer.addProperty("status", "error");
-                                                answer.addProperty("message", "Utente già esistente.");
+                                        JsonObject answer = new JsonObject();
+                                        try {
+                                            JsonObject request = JsonParser.parseString(messaggio).getAsJsonObject();
+                                            String operation = request.get("operation").getAsString();
+                                            switch (operation) {
+                                                case "register":
+                                                    String name = request.get("name").getAsString();
+                                                    String psw = request.get("psw").getAsString();
+                                                    boolean resRegistered = userManager.register(name, psw);
+
+                                                    if (resRegistered) {
+                                                        answer.addProperty("status", "ok");
+                                                        answer.addProperty("message",
+                                                                "Registrazione avvenuta con successo.");
+                                                    } else {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente già esistente.");
+                                                    }
+                                                    break;
+                                                case "login":
+                                                    String loginName = request.get("username").getAsString();
+                                                    String loginPsw = request.get("psw").getAsString();
+                                                    ServerResponse resLogin = userManager.login(loginName, loginPsw);
+                                                    answer.addProperty("status", resLogin.status);
+                                                    answer.addProperty("message", resLogin.message);
+                                                    if (resLogin.status.equals("ok")) {
+                                                        session.LoggedUsername = loginName;
+                                                    }
+                                                    break;
+                                                case "logout":
+                                                    if (session.LoggedUsername == null) {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente non loggato.");
+                                                    } else {
+                                                        userManager.logout(session);
+                                                        answer.addProperty("status", "ok");
+                                                        answer.addProperty("message", "Logout effettuato.");
+                                                    }
+
+                                                    break;
+                                                default:
+                                                    answer.addProperty("status", "error");
+                                                    answer.addProperty("message", "Operazione non supportata");
+                                                    break;
                                             }
-                                            String risposta = answer.toString() + "\n";
-                                            byte[] bytes = risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                                            outBuf = ByteBuffer.wrap(bytes);
+                                        } catch (Exception e) {
+                                            answer = new JsonObject();
+                                            answer.addProperty("status", "error");
+                                            answer.addProperty("message", "JSON non valido");
+                                        }
+                                        String risposta = answer.toString() + "\n";
+                                        ByteBuffer outBuf = ByteBuffer
+                                                .wrap(risposta.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                                        try {
                                             while (outBuf.hasRemaining()) {
-                                                try {
-                                                    client.write(outBuf);
-                                                } catch (Exception e) {
-                                                    System.out.println(e);
-                                                }
+                                                client.write(outBuf);
                                             }
+                                        } catch (Exception e) {
+                                            System.err.println("Errrore invio risposta: " + e.getMessage());
                                         }
                                     }
                                 };
@@ -126,9 +159,5 @@ public class ServerMain {
             }
 
         }
-    }
-
-    static class ClientSession {
-        public ByteBuffer buffer = ByteBuffer.allocate(1024);
     }
 }

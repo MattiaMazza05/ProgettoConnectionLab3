@@ -1,42 +1,6 @@
 {
-  "giulia": {
-    "username": "giulia",
-    "password": "giu!pass"
-  },
-  "elena": {
-    "username": "elena",
-    "password": "elena99"
-  },
-  "davide": {
-    "username": "davide",
-    "password": "qwerty"
-  },
-  "Davide": {
-    "username": "Davide",
-    "password": "1908"
-  },
-  "marco": {
-    "username": "marco",
-    "password": "mk-pass"
-  },
-  "sara": {
-    "username": "sara",
-    "password": "sara_pw"
-  },
-  "mario": {
-    "username": "mario",
-    "password": "123"
-  },
-  "paolo": {
-    "username": "paolo",
-    "password": "paolo_test"
-  },
-  "luigi": {
-    "username": "luigi",
-    "password": "abc123"
-  },
-  "anna": {
-    "username": "anna",
-    "password": "anna2026"
+  "mattia": {
+    "username": "mattia",
+    "password": "pass123"
   }
 }
