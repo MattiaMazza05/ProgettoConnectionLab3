@@ -3,26 +3,40 @@ package common;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 public class PuzzleRepository {
-    private PuzzleData data;
+    private final List<PuzzleData.Puzzle> puzzles;
     private int currentIndex = 0; // prox puzzle da usare
 
     public PuzzleRepository(String filePath) throws IOException {
         Gson gson = new Gson();
+        List<PuzzleData.Puzzle> loaded = new ArrayList<>();
+
         try (Reader reader = new FileReader(filePath)) {
-            this.data = gson.fromJson(reader, PuzzleData.class);
+            Type listType = new TypeToken<List<PuzzleData.Puzzle>>() {
+            }.getType();
+            List<PuzzleData.Puzzle> parsed = gson.fromJson(reader, listType);
+            if (parsed != null) {
+                loaded = parsed;
+            }
         } catch (Exception e) {
-            System.err.println(e.getMessage());
+            System.err.println("Errore caricamento puzzle: " + e.getMessage());
         }
-        System.out.println("Caricati " + data.puzzles.size() + "puzzle");
+
+        this.puzzles = loaded;
+        System.out.println("Caricati " + puzzles.size() + " puzzle");
     }
 
     public synchronized PuzzleData.Puzzle getNextPuzzle() {
-        if (currentIndex >= data.puzzles.size())
+        if (currentIndex >= puzzles.size()) {
             return null;
-        return data.puzzles.get(currentIndex++);
+        }
+        return puzzles.get(currentIndex++);
     }
 }

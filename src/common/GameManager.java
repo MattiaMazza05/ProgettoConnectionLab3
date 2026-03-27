@@ -1,7 +1,6 @@
 package common;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +27,10 @@ public class GameManager {
             System.out.println("Puzzle esauriti");
         } else {
             PuzzleData.Puzzle nextGame = puzzleRepo.getNextPuzzle();
+            currentPuzzle = nextGame;
+            if(nextGame == null){
+                System.out.println("Puzzle esauriti.");
+            }
             playerState.clear();
             gameEndTime = System.currentTimeMillis() + (gameDurationSeconds * 1000L);
             System.out.println("Nuova partita avviata!");
@@ -42,8 +45,9 @@ public class GameManager {
 
     public String[] getShuffledWords() {
         PuzzleData.Puzzle puzzle = currentPuzzle;
-        if (puzzle == null && puzzle.groups == null && puzzle.groups.size() >= 4) {
+        if (puzzle == null || puzzle.groups == null || puzzle.groups.size() < 4) {
             System.err.println("Dati non validi.");
+            return new String[0];
 
         }
 
