@@ -8,7 +8,7 @@ import server.ClientSession;
 
 import java.util.Set;
 
-public class UserManager { //classe per la gestione degli utenti e autenticazione 
+public class UserManager { // classe per la gestione degli utenti e autenticazione
     public ConcurrentHashMap<String, UserData> users = new ConcurrentHashMap<>();
     private final Set<String> loggedIn = ConcurrentHashMap.newKeySet();
 
@@ -60,10 +60,19 @@ public class UserManager { //classe per la gestione degli utenti e autenticazion
         }
     }
 
-    public synchronized void logout(ClientSession session){
+    public synchronized void logout(ClientSession session) {
         if (session.LoggedUsername != null) {
             loggedIn.remove(session.LoggedUsername);
             session.LoggedUsername = null;
         }
+    }
+
+    public void recordGameWin(String username, int mistakes) {
+        System.out.println("Partite vinte: Test");
+    }
+
+    public int recordGameLoss(String username, int mistakes) {
+        System.out.println("Partite perse: test");
+        return 1;
     }
 }

@@ -12,6 +12,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -29,7 +33,7 @@ public class ServerMain {
         int gameDurationSeconds = 30;
         userManager.load();
         PuzzleRepository puzzleRepo = new PuzzleRepository("data/Connections_Data.json");
-        GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds);
+        GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager);
         gameManager.startNewGame();
         Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante e
                                              // sulla porta 8080
@@ -38,7 +42,6 @@ public class ServerMain {
         serverChannel.bind(new InetSocketAddress(8080));
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server NIO in ascolto sulla porta 8080...");
-        //TODO fare test Giorno 13 e capire perchè non funziona.
         ExecutorService pool = Executors.newFixedThreadPool(10); // fisso un thread pool a 10 thread per le varie
                                                                  // operazioni
         ScheduledExecutorService timedSaves = Executors.newSingleThreadScheduledExecutor(); // creo un salvataggio
@@ -84,8 +87,12 @@ public class ServerMain {
                             key.cancel();
                             client.close();
                         } else {
-                            List<String> messaggi = MessageReader.extractMessage(session.readBuffer); //estraggo il messaggio e lancio il task
-                            for (String messaggio : messaggi) { //per ogni stringa presente in messaggi, capisco tramite il campo "operation" cosa vuole il client e chiamo la funzione di conseguenza 
+                            List<String> messaggi = MessageReader.extractMessage(session.readBuffer); // estraggo il
+                                                                                                      // messaggio e
+                                                                                                      // lancio il task
+                            for (String messaggio : messaggi) { // per ogni stringa presente in messaggi, capisco
+                                                                // tramite il campo "operation" cosa vuole il client e
+                                                                // chiamo la funzione di conseguenza
                                 Runnable task = new Runnable() {
                                     @Override
                                     public void run() {
@@ -128,6 +135,24 @@ public class ServerMain {
                                                         answer.addProperty("message", "Logout effettuato.");
                                                     }
 
+                                                    break;
+                                                case "submitProposal":
+                                                    if (session.LoggedUsername == null) {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente non loggato.");
+                                                    } else {
+                                                        JsonArray wordsJson = request.getAsJsonArray("words");
+                                                        List<String> words = new ArrayList<>();
+                                                        if (wordsJson != null) {
+                                                            for (JsonElement el : wordsJson) {
+                                                                words.add(el.getAsString());
+                                                            }
+                                                        }
+                                                        ServerResponse resSubmit = gameManager
+                                                                .submitProposal(session.LoggedUsername, words);
+                                                        answer.addProperty("status", resSubmit.status);
+                                                        answer.addProperty("message", resSubmit.message);
+                                                    }
                                                     break;
                                                 default:
                                                     answer.addProperty("status", "error");
