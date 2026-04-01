@@ -6,11 +6,14 @@ import com.google.gson.reflect.TypeToken;
 
 import server.ClientSession;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class UserManager { // classe per la gestione degli utenti e autenticazione
     public ConcurrentHashMap<String, UserData> users = new ConcurrentHashMap<>();
     private final Set<String> loggedIn = ConcurrentHashMap.newKeySet();
+    private final Set<ClientSession> activeSession = ConcurrentHashMap.newKeySet();
 
     public synchronized void load() {
         try {
@@ -74,5 +77,18 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
     public int recordGameLoss(String username, int mistakes) {
         System.out.println("Partite perse: test");
         return 1;
+    }
+
+    public void addSession(ClientSession session){
+        if (session != null && session.LoggedUsername != null) {
+            activeSession.add(session);
+        }
+    }
+    public void removeSession(ClientSession session){
+        activeSession.remove(session);
+    } 
+
+    public List<ClientSession> getSessions(){//crea una copia e ritorna un array delle sessioni attive
+        return new ArrayList<>(activeSession);
     }
 }

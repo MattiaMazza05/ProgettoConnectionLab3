@@ -33,7 +33,8 @@ public class ServerMain {
         int gameDurationSeconds = 30;
         userManager.load();
         PuzzleRepository puzzleRepo = new PuzzleRepository("data/Connections_Data.json");
-        GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager);
+        common.UdpNotifier udpNotifier = new common.UdpNotifier();
+        GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager, udpNotifier);
         gameManager.startNewGame();
         Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante e
                                              // sulla porta 8080
@@ -118,11 +119,18 @@ public class ServerMain {
                                                 case "login":
                                                     String loginName = request.get("username").getAsString();
                                                     String loginPsw = request.get("psw").getAsString();
+                                                    int udpPort = request.get("udpPort").getAsInt();
                                                     ServerResponse resLogin = userManager.login(loginName, loginPsw);
                                                     answer.addProperty("status", resLogin.status);
                                                     answer.addProperty("message", resLogin.message);
                                                     if (resLogin.status.equals("ok")) {
                                                         session.LoggedUsername = loginName;
+                                                        session.clientPort = udpPort;
+                                                        InetSocketAddress remoteAddress = (InetSocketAddress) client
+                                                                .getRemoteAddress();
+                                                        session.clInetAddress = remoteAddress.getAddress();
+                                                        gameManager.joinCurrentGame(loginName);
+                                                        userManager.addSession(session);
                                                     }
                                                     break;
                                                 case "logout":
@@ -131,6 +139,7 @@ public class ServerMain {
                                                         answer.addProperty("message", "Utente non loggato.");
                                                     } else {
                                                         userManager.logout(session);
+                                                        userManager.removeSession(session);
                                                         answer.addProperty("status", "ok");
                                                         answer.addProperty("message", "Logout effettuato.");
                                                     }

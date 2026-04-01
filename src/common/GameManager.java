@@ -8,6 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import server.ClientSession;
+
 import java.util.Set;
 
 public class GameManager {
@@ -16,14 +19,17 @@ public class GameManager {
     private final ConcurrentHashMap<String, PlayerGameState> playerState = new ConcurrentHashMap<>();
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
     private final UserManager userManager;
-
     private final PuzzleRepository puzzleRepo;
     private final int gameDurationSeconds;
+    private final UdpNotifier udpNotifier;
 
-    public GameManager(PuzzleRepository puzzleRepo, int gameDurationSeconds, UserManager userManager) {
+    public GameManager(PuzzleRepository puzzleRepo, int gameDurationSeconds, UserManager userManager,
+            UdpNotifier udpNotifier) {
         this.puzzleRepo = puzzleRepo;
         this.gameDurationSeconds = gameDurationSeconds;
         this.userManager = userManager;
+        this.udpNotifier = udpNotifier;
+
     }
 
     public synchronized void startNewGame() {
@@ -34,6 +40,7 @@ public class GameManager {
             currentPuzzle = nextGame;
             if (nextGame == null) {
                 System.out.println("Puzzle esauriti.");
+                return;
             }
             playerState.clear();
             gameEndTime = System.currentTimeMillis() + (gameDurationSeconds * 1000L);
@@ -43,7 +50,32 @@ public class GameManager {
     }
 
     private void onGameEnd() {
-        System.out.println("Partita terminata");
+        GameEndNotification gameNotification = new GameEndNotification();
+        gameNotification.solution = buildSolution();
+        int totalPlayers = 0, finishedPlayers = 0, winnersCount = 0, sumScore = 0;
+        for (PlayerGameState i : playerState.values()) {
+            totalPlayers++;
+            sumScore += i.score;
+            if (i.finished) {
+                finishedPlayers++;
+            }
+            if (i.correctGroups != null && i.correctGroups.size() == 3) {
+                winnersCount++;
+            }
+        }
+        gameNotification.totalPlayers = totalPlayers;
+        gameNotification.finishedPlayers = finishedPlayers;
+        gameNotification.winnersCount = winnersCount;
+        if (totalPlayers > 0) {
+            gameNotification.agvScore = sumScore / totalPlayers;
+        }
+        gameNotification.solution = currentPuzzle.groups;
+        List<ClientSession> sessions = userManager.getSessions();
+        try {
+            udpNotifier.notifyAllPlayer(sessions, gameNotification);
+        } catch (Exception e) {
+            System.err.println("Errore nell'invio di notifiche UDP: " + e.getMessage());
+        }
         startNewGame();
     }
 
@@ -106,18 +138,31 @@ public class GameManager {
         if (state.finished == true) {
             return ServerResponse.err("Partita terminata.");
         }
+        if (words == null || words.size() != 4) {
+            return ServerResponse.err("Proposta malformata: scrivi esattamente 4 parole.");
+        }
+        Set<String> wordsInGame = new HashSet<>();
+        if (currentPuzzle == null || currentPuzzle.groups == null) {
+            return ServerResponse.err("Nessuna partita attiva.");
+        }
+        for (int i = 0; i < currentPuzzle.groups.size(); i++) {
+            PuzzleData.Group group = currentPuzzle.groups.get(i);
+            if (group != null && group.words != null) {
+                wordsInGame.addAll(group.words);
+            }
+        }
+        Set<String> noDuplicates = new HashSet<>(words);// uso un set per evitare che l'utene usi parole duplicate
+        if (noDuplicates.size() != 4) {
+            return ServerResponse.err("Proposta malformata: parole duplicate.");
+        }
+        if (!wordsInGame.containsAll(noDuplicates)) {
+            return ServerResponse.err("Proposta malformata: parole non presenti nel puzzle.");
+        }
         if (state.mistakes >= 4) {
             return ServerResponse.err("Hai commesso 4 errori, tentativi esauriti.");
         }
         if (System.currentTimeMillis() > gameEndTime) {
             return ServerResponse.err("Tempo esaurito.");
-        }
-        if (words == null || words.size() != 4) {
-            return ServerResponse.err("Proposta malformata: scrivi esattamente 4 parole.");
-        }
-        Set<String> noDuplicates = new HashSet<>(words);// uso un set per evitare che l'utene usi parole duplicate
-        if (noDuplicates.size() != 4) {
-            return ServerResponse.err("Proposta malformata: parole duplicate.");
         }
         List<String> wordsToCheck = new ArrayList<>(noDuplicates);
         PuzzleData.Group matchedGroup = findMatchingGroup(wordsToCheck, state);
@@ -125,10 +170,10 @@ public class GameManager {
             state.mistakes++;
             if (state.mistakes == 4) {
                 state.finished = true;
-                state.score = (state.correctGroups.size() * 6)
-                        - (state.mistakes * userManager.recordGameLoss(username, state.mistakes));
+                state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
+                userManager.recordGameLoss(username, state.mistakes);
             } else {
-                 state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
+                state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
             }
             ProposalResponse response = new ProposalResponse("error", "Proposta errata");
             response.mistakes = state.mistakes;
@@ -139,7 +184,7 @@ public class GameManager {
             int bonusGroup = Math.min(state.correctGroups.size(), 3);
             int bonus = bonusGroup * 6;
             state.score = bonus - (state.mistakes * 4);
-            if(state.correctGroups.size() == 3 ){
+            if (state.correctGroups.size() == 3) {
                 state.finished = true;
                 userManager.recordGameWin(username, state.mistakes);
             }
@@ -151,5 +196,16 @@ public class GameManager {
             response.won = state.finished;
             return response;
         }
+    }
+
+    public void joinCurrentGame(String username) {
+        playerState.putIfAbsent(username, new PlayerGameState());
+    }
+
+    public List<PuzzleData.Group> buildSolution() {
+        if (currentPuzzle == null) {
+            return null;
+        }
+        return currentPuzzle.groups;
     }
 }
