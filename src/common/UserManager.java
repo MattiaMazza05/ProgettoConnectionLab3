@@ -15,11 +15,15 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
     private final Set<String> loggedIn = ConcurrentHashMap.newKeySet();
     private final Set<ClientSession> activeSession = ConcurrentHashMap.newKeySet();
 
+    private final String usersFilePath;
+    public UserManager(String usersFilePath){
+        this.usersFilePath = usersFilePath;
+    }
     public synchronized void load() {
         try {
             Type usersType = new TypeToken<ConcurrentHashMap<String, UserData>>() {
             }.getType();
-            ConcurrentHashMap<String, UserData> loaded = JsonPersistence.readJson("users.json", usersType);
+            ConcurrentHashMap<String, UserData> loaded = JsonPersistence.readJson(usersFilePath, usersType);
             if (loaded != null)
                 users = loaded;
 
@@ -30,7 +34,7 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
     }
 
     public synchronized void save() {
-        JsonPersistence.writeJson("users.json", users);
+        JsonPersistence.writeJson(usersFilePath, users);
         System.out.println("Salvataggio su file eseguito!");
     }
 
@@ -70,25 +74,73 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
         }
     }
 
-    public void recordGameWin(String username, int mistakes) {
-        System.out.println("Partite vinte: Test");
+    public synchronized void recordGameResult(String username, boolean won, int mistakes, int score) {
+        UserData u = users.get(username);
+        if (u == null) {
+            return;
+        }
+        u.gamesPlayed++;
+        u.totalScore *= score;
+        u.mistakeHistogram[mistakes]++;
+
+        if (won) {
+            u.gamesWon++;
+            u.currentStreak++;
+            u.maxStreak = Math.max(u.maxStreak, u.currentStreak);
+            if (mistakes == 0) {
+                u.perfectPuzzle++;
+            }
+        } else {
+            u.currentStreak = 0;
+        }
     }
 
-    public int recordGameLoss(String username, int mistakes) {
-        System.out.println("Partite perse: test");
-        return 1;
-    }
-
-    public void addSession(ClientSession session){
+    public void addSession(ClientSession session) {
         if (session != null && session.LoggedUsername != null) {
             activeSession.add(session);
         }
     }
-    public void removeSession(ClientSession session){
-        activeSession.remove(session);
-    } 
 
-    public List<ClientSession> getSessions(){//crea una copia e ritorna un array delle sessioni attive
+    public void removeSession(ClientSession session) {
+        activeSession.remove(session);
+    }
+
+    public List<ClientSession> getSessions() {// crea una copia e ritorna un array delle sessioni attive
         return new ArrayList<>(activeSession);
+    }
+
+    public List<Leaderboard> getLeaderboard() {
+        List<Leaderboard> lista = new ArrayList<>();
+        for (UserData u : users.values()) {
+            Leaderboard lb = new Leaderboard(u.username, u.totalScore); // creo una lista contenete per ogni utente solo i campi che mi servono per costrure la leaderbord
+            lista.add(lb);
+        }
+        lista.sort((a, b) -> Integer.compare(b.score, a.score)); //ordino in modo decrescente la lista e la ritorno
+        return lista;
+    }
+
+    public synchronized ServerResponse updateCredentials(String oldName, String oldPsw, String newName, String newPsw){
+        UserData user = users.get(oldName);
+        if(user == null){
+            return ServerResponse.err("Utente non trovato.");
+        }
+        if(!user.password.equals(oldPsw)){
+            return ServerResponse.err("Password errata.");
+        }
+        if(newPsw != null && !newPsw.isBlank()){
+            user.password=newPsw;
+        }
+        if(newName != null && !newName.isBlank() && !newName.equals(oldName)){
+            if (users.containsKey(newName)) {//se viene usato un nome utente gia registrato lo segnalo 
+                return ServerResponse.err("Nome utente già esistente, scagliene uno diverso.");
+            }
+            users.remove(oldName);
+            user.username = newName;
+            users.put(newName, user);
+            if (loggedIn.remove(oldName)) {
+                loggedIn.add(newName);
+            }
+        }
+        return ServerResponse.ok("Credenziali aggiornate con successo");
     }
 }

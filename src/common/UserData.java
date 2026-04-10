@@ -3,6 +3,8 @@ package common;
 public class UserData { //formato dati utente
     public String username;
     public String password;
+    public int totalScore, gamesPlayed, gamesWon, currentStreak, maxStreak, perfectPuzzle;
+    public int[] mistakeHistogram = new int[5];
 
     public UserData() {
     }

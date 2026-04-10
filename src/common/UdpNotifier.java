@@ -17,8 +17,8 @@ public class UdpNotifier {
     private DatagramSocket dS;
     private final Gson gson = new Gson();
 
-    public UdpNotifier() throws SocketException {
-        this.dS = new DatagramSocket();
+    public UdpNotifier(int port) throws SocketException {
+        this.dS = new DatagramSocket(port);
     }
 
     public void notifyAllPlayer(List<ClientSession> sessions, GameEndNotification message) throws IOException {

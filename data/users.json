@@ -1,0 +1,36 @@
+{
+  "mario": {
+    "username": "mario",
+    "password": "rossi123",
+    "totalScore": 0,
+    "gamesPlayed": 0,
+    "gamesWon": 0,
+    "currentStreak": 0,
+    "maxStreak": 0,
+    "perfectPuzzle": 0,
+    "mistakeHistogram": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "pippo": {
+    "username": "pippo",
+    "password": "password123",
+    "totalScore": 0,
+    "gamesPlayed": 0,
+    "gamesWon": 0,
+    "currentStreak": 0,
+    "maxStreak": 0,
+    "perfectPuzzle": 0,
+    "mistakeHistogram": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+}

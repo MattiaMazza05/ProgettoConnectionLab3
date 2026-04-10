@@ -9,12 +9,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import server.ClientSession;
 
 import java.util.Set;
 
 public class GameManager {
-    private volatile PuzzleData.Puzzle currentPuzzle;
+    private volatile PuzzleData.Puzzle currentPuzzle; // uso volatile per ottenere sempre la variabile più aggiornata
     private volatile long gameEndTime;
     private final ConcurrentHashMap<String, PlayerGameState> playerState = new ConcurrentHashMap<>();
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
@@ -22,6 +25,7 @@ public class GameManager {
     private final PuzzleRepository puzzleRepo;
     private final int gameDurationSeconds;
     private final UdpNotifier udpNotifier;
+    private final List<GameRecord> gameHistory = new ArrayList<>();
 
     public GameManager(PuzzleRepository puzzleRepo, int gameDurationSeconds, UserManager userManager,
             UdpNotifier udpNotifier) {
@@ -49,17 +53,26 @@ public class GameManager {
         }
     }
 
-    private void onGameEnd() {
+    private synchronized void onGameEnd() {
         GameEndNotification gameNotification = new GameEndNotification();
         gameNotification.solution = buildSolution();
         int totalPlayers = 0, finishedPlayers = 0, winnersCount = 0, sumScore = 0;
-        for (PlayerGameState i : playerState.values()) {
+        for (java.util.Map.Entry<String, PlayerGameState> entry : playerState.entrySet()) {
+            String username = entry.getKey();
+            PlayerGameState state = entry.getValue();
+
             totalPlayers++;
-            sumScore += i.score;
-            if (i.finished) {
+            sumScore += state.score;
+
+            if (state.finished) {
+                finishedPlayers++;
+            } else {
+                state.finished = true;
+                userManager.recordGameResult(username, false, state.mistakes, state.score);
                 finishedPlayers++;
             }
-            if (i.correctGroups != null && i.correctGroups.size() == 3) {
+
+            if (state.correctGroups != null && state.correctGroups.size() == 3) {
                 winnersCount++;
             }
         }
@@ -70,6 +83,19 @@ public class GameManager {
             gameNotification.agvScore = sumScore / totalPlayers;
         }
         gameNotification.solution = currentPuzzle.groups;
+
+        if (currentPuzzle != null) { // creo e salvo game record
+            GameRecord record = new GameRecord();
+            record.gameId = currentPuzzle.gameId;
+            record.solution = currentPuzzle.groups;
+            record.finalStates = new ConcurrentHashMap<>(playerState);
+            record.finishedCount = finishedPlayers;
+            record.winnersCount = winnersCount;
+            record.agvScore = gameNotification.agvScore;
+            record.date = new java.util.Date().toString();
+            gameHistory.add(record);
+        }
+
         List<ClientSession> sessions = userManager.getSessions();
         try {
             udpNotifier.notifyAllPlayer(sessions, gameNotification);
@@ -171,7 +197,7 @@ public class GameManager {
             if (state.mistakes == 4) {
                 state.finished = true;
                 state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
-                userManager.recordGameLoss(username, state.mistakes);
+                userManager.recordGameResult(username, false, state.mistakes, state.score);
             } else {
                 state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
             }
@@ -186,7 +212,7 @@ public class GameManager {
             state.score = bonus - (state.mistakes * 4);
             if (state.correctGroups.size() == 3) {
                 state.finished = true;
-                userManager.recordGameWin(username, state.mistakes);
+                userManager.recordGameResult(username, true, state.mistakes, state.score);
             }
 
             ProposalResponse response = new ProposalResponse("ok", "Corretto Tema: " + matchedGroup.theme);
@@ -207,5 +233,74 @@ public class GameManager {
             return null;
         }
         return currentPuzzle.groups;
+    }
+
+    private GameRecord getHistoricalgame(int gameId) {
+        for (GameRecord r : gameHistory) {
+            if (r.gameId == gameId) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    public JsonObject requestGameInfo(String username, int gameId) {
+        Gson gson = new Gson();
+        JsonObject r = new JsonObject();
+
+        if (gameId == -1 || gameId == currentPuzzle.gameId) { // uso -1 per indicare che l'utente vuole le statistiche
+                                                              // della partita corrente, dato che i game iniziano da 0
+            PlayerGameState state = playerState.get(username);
+
+            if (state == null) {
+                r.addProperty("status", "error");
+                r.addProperty("message", "Non stai partecipando a questa partita");
+                return r;
+            }
+
+            if (System.currentTimeMillis() < gameEndTime && !state.finished) {
+                r.addProperty("status", "ongoing");
+                r.addProperty("timeRemaining", (gameEndTime - System.currentTimeMillis()) / 1000);
+                r.addProperty("score", state.score);
+                r.addProperty("mistakes", state.mistakes);
+                List<String> remainingWords = new ArrayList<>();
+                Collections.addAll(remainingWords, getShuffledWords());
+                for (PuzzleData.Group g : state.correctGroups) {
+                    remainingWords.removeAll(g.words);
+                }
+                r.add("remainingWords", gson.toJsonTree(remainingWords));
+                r.add("correctGroups", gson.toJsonTree(state.correctGroups));
+                return r;
+            } else {
+                r.addProperty("status", "finished");
+                r.add("solution", gson.toJsonTree(currentPuzzle.groups));
+                r.addProperty("correctCount", state.correctGroups.size());
+                r.addProperty("mistakes", state.mistakes);
+                r.addProperty("score", state.score);
+                return r;
+            }
+        }
+        GameRecord record = getHistoricalgame(gameId);
+
+        if (record == null) {
+            r.addProperty("status", "error");
+            r.addProperty("message", "Partita non trovata.");
+            return r;
+        }
+
+        // Continua con il resto del tuo codice...
+        PlayerGameState oldState = record.finalStates.get(username);
+        if (oldState == null) {
+            r.addProperty("status", "error");
+            r.addProperty("message", "Non hai partecipato a questa partita.");
+            return r;
+        }
+
+        r.addProperty("status", "finished");
+        r.add("solution", gson.toJsonTree(record.solution));
+        r.addProperty("correctCount", oldState.correctGroups.size());
+        r.addProperty("mistakes", oldState.mistakes);
+        r.addProperty("score", oldState.score);
+        return r;
     }
 }

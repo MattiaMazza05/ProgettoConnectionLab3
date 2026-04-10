@@ -5,6 +5,8 @@ import common.MessageReader;
 import common.PuzzleRepository;
 import common.ServerResponse;
 import common.UserManager;
+
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -15,6 +17,7 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,19 +31,31 @@ import com.google.gson.JsonParser;
 
 public class ServerMain {
     public static void main(String[] args) throws IOException {
-        UserManager userManager = new UserManager(); // creo oggetto di tipo UserManager
+        Properties properties = new Properties();
+        try (FileInputStream in = new FileInputStream("config/server.properties")) {
+            properties.load(in);
+        } catch (Exception e) {
+            System.err.println("Errore: Impossibile leggere il file di configurazione");
+            System.exit(1);
+        }
+        int tcpPort = Integer.parseInt(properties.getProperty("tcp.port"));
+        int udpPort = Integer.parseInt(properties.getProperty("udp.port"));
+        int gameDurationSeconds = Integer.parseInt(properties.getProperty("game.duration.seconds"));
+        int persistenceInterval = Integer.parseInt(properties.getProperty("persistence.interval.seconds"));
+        String usersFile = properties.getProperty("users.file");
+        UserManager userManager = new UserManager(usersFile); // creo oggetto di tipo UserManager
         userManager.load(); // carico in memoria il file utenti json
-        int gameDurationSeconds = 30;
-        userManager.load();
+
         PuzzleRepository puzzleRepo = new PuzzleRepository("data/Connections_Data.json");
-        common.UdpNotifier udpNotifier = new common.UdpNotifier();
+        common.UdpNotifier udpNotifier = new common.UdpNotifier(udpPort);
         GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager, udpNotifier);
+
         gameManager.startNewGame();
         Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante e
                                              // sulla porta 8080
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(false);
-        serverChannel.bind(new InetSocketAddress(8080));
+        serverChannel.bind(new InetSocketAddress(tcpPort));
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server NIO in ascolto sulla porta 8080...");
         ExecutorService pool = Executors.newFixedThreadPool(10); // fisso un thread pool a 10 thread per le varie
@@ -54,7 +69,7 @@ public class ServerMain {
                 userManager.save();
             }
         };
-        timedSaves.scheduleAtFixedRate(saves, 0, 10, TimeUnit.SECONDS);
+        timedSaves.scheduleAtFixedRate(saves, 0, persistenceInterval, TimeUnit.SECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> userManager.save())); // mi assicuro inoltre che alla
                                                                                     // chiusura del server venga salvato
                                                                                     // lo stato attuale
@@ -116,6 +131,28 @@ public class ServerMain {
                                                         answer.addProperty("message", "Utente già esistente.");
                                                     }
                                                     break;
+                                                case "updateCredentials":
+                                                    String oldName = request.get("oldName").getAsString();
+                                                    String oldPsw = request.get("oldPsw").getAsString();
+                                                    String newName = null, newPsw = null;
+                                                    if (request.has("newName")) {
+                                                        newName = request.get("newName").getAsString();
+                                                    }
+                                                    if (request.has("newPsw")) {
+                                                        newPsw = request.get("newPsw").getAsString();
+                                                    }
+                                                    ServerResponse resp = userManager.updateCredentials(oldName, oldPsw,
+                                                            newName, newPsw);
+                                                    answer.addProperty("status", resp.status);
+                                                    answer.addProperty("message", resp.message);
+
+                                                    if (resp.status.equals("ok") && newName != null
+                                                            && session.LoggedUsername != null) {
+                                                        if (session.LoggedUsername.equals(oldName)) {
+                                                            session.LoggedUsername = newName;
+                                                        }
+                                                    }
+                                                    break;
                                                 case "login":
                                                     String loginName = request.get("username").getAsString();
                                                     String loginPsw = request.get("psw").getAsString();
@@ -162,6 +199,72 @@ public class ServerMain {
                                                         answer.addProperty("status", resSubmit.status);
                                                         answer.addProperty("message", resSubmit.message);
                                                     }
+                                                    break;
+                                                case "requestGameInfo":
+                                                    if (session.LoggedUsername == null) {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente non loggato.");
+                                                    }else{
+                                                        int gameId = -1;
+                                                        if (request.has("gameId")) {
+                                                            gameId = request.get("gameId").getAsInt();
+                                                        }
+                                                        answer = gameManager.requestGameInfo(session.LoggedUsername, gameId);
+                                                    }
+                                                    break;
+                                                case "requestGameStats":
+                                                    break;
+                                                case "requestLeaderboard":
+                                                    if (session.LoggedUsername == null) {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente non loggato.");
+                                                    } else {
+                                                        List<common.Leaderboard> leaderbord = userManager
+                                                                .getLeaderboard();
+                                                        if (request.has("playerName")) {
+                                                            String playerName = request.get("playerName").getAsString();
+                                                            boolean found = false;
+
+                                                            for (int i = 0; i < leaderbord.size(); i++) {
+                                                                if (leaderbord.get(i).username.equals(playerName)) {
+                                                                    found = true;
+                                                                    answer.addProperty("status", "ok");
+                                                                    answer.addProperty("position", i + 1);
+                                                                    answer.addProperty("score",
+                                                                            leaderbord.get(i).score);
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (!found) {
+                                                                answer.addProperty("status", "error");
+                                                                answer.addProperty("message", "Giocatore non trovato");
+                                                            }
+                                                        } else if (request.has("topPlayers")) {
+                                                            int limit = request.get("topPlayers").getAsInt();
+                                                            answer.addProperty("status", "ok");
+                                                            JsonArray jsonList = new JsonArray();
+                                                            for (int i = 0; i < Math.min(limit,
+                                                                    leaderbord.size()); i++) {
+                                                                JsonObject lbElement = new JsonObject();
+                                                                lbElement.addProperty("username",
+                                                                        leaderbord.get(i).username);
+                                                                lbElement.addProperty("score", leaderbord.get(i).score);
+                                                                jsonList.add(lbElement);
+                                                            }
+                                                        } else {
+                                                            answer.addProperty("status", "ok");
+                                                            JsonArray jsonList = new JsonArray();
+                                                            for (common.Leaderboard lb : leaderbord) {
+                                                                JsonObject lbElement = new JsonObject();
+                                                                lbElement.addProperty("username", lb.username);
+                                                                lbElement.addProperty("score", lb.score);
+                                                                jsonList.add(lbElement);
+                                                            }
+                                                            answer.add("leaderboard", jsonList);
+                                                        }
+                                                    }
+                                                    break;
+                                                case "requestPlayerStats":
                                                     break;
                                                 default:
                                                     answer.addProperty("status", "error");
