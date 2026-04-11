@@ -204,15 +204,24 @@ public class ServerMain {
                                                     if (session.LoggedUsername == null) {
                                                         answer.addProperty("status", "error");
                                                         answer.addProperty("message", "Utente non loggato.");
-                                                    }else{
+                                                    } else {
                                                         int gameId = -1;
                                                         if (request.has("gameId")) {
                                                             gameId = request.get("gameId").getAsInt();
                                                         }
-                                                        answer = gameManager.requestGameInfo(session.LoggedUsername, gameId);
+                                                        answer = gameManager.requestGameInfo(session.LoggedUsername,
+                                                                gameId);
                                                     }
                                                     break;
                                                 case "requestGameStats":
+                                                    if (session.LoggedUsername == null) {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente non loggato.");
+                                                    } else {
+                                                        int gameId = request.get("gameId").getAsInt();
+                                                        JsonObject response = gameManager.requestGameStats(gameId);
+                                                        answer = response;
+                                                    }
                                                     break;
                                                 case "requestLeaderboard":
                                                     if (session.LoggedUsername == null) {
@@ -265,6 +274,13 @@ public class ServerMain {
                                                     }
                                                     break;
                                                 case "requestPlayerStats":
+                                                    if (session.LoggedUsername == null) {
+                                                        answer.addProperty("status", "error");
+                                                        answer.addProperty("message", "Utente non loggato.");
+                                                    } else {
+                                                        JsonObject stats = userManager.requestPlayerStats(session.LoggedUsername);
+                                                        answer = stats;
+                                                    }
                                                     break;
                                                 default:
                                                     answer.addProperty("status", "error");

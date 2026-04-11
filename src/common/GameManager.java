@@ -303,4 +303,43 @@ public class GameManager {
         r.addProperty("score", oldState.score);
         return r;
     }
+
+    public JsonObject requestGameStats(int gameId) {
+        JsonObject r = new JsonObject();
+        if (gameId == -1 || gameId == currentPuzzle.gameId) {// anche qua uso -1 per indicare la partita corrente
+            int total = playerState.size();
+            int finished = 0;
+            int winners = 0;
+
+            for (PlayerGameState state : playerState.values()) {
+                if (state.finished) {
+                    finished++;
+                }
+                if (state.correctGroups != null && state.correctGroups.size() == 3) {
+                    winners++;
+                }
+            }
+
+            r.addProperty("status", "ok");
+            r.addProperty("totalPlayers", total);
+            r.addProperty("playingPlayers", total - finished);
+            r.addProperty("finishedPlayers", finished);
+            r.addProperty("winnersCount", winners);
+            return r;
+        }
+
+        GameRecord record = getHistoricalgame(gameId);
+        if (record == null) {
+            r.addProperty("status", "error");
+            r.addProperty("message", "Partita non trovata");
+            return r;
+        }
+        //ritorno i valori di una partita vecchia
+        r.addProperty("status", "ok");
+        r.addProperty("totalPlayers", record.finalStates.size());
+        r.addProperty("playingPlayers", 0);
+        r.addProperty("finishedPlayers", record.finishedCount);
+        r.addProperty("winnersCount", record.winnersCount);
+        return r;
+    }
 }

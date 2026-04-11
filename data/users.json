@@ -3,30 +3,30 @@
     "username": "mario",
     "password": "rossi123",
     "totalScore": 0,
-    "gamesPlayed": 0,
+    "gamesPlayed": 3,
     "gamesWon": 0,
     "currentStreak": 0,
     "maxStreak": 0,
     "perfectPuzzle": 0,
     "mistakeHistogram": [
+      1,
+      1,
       0,
       0,
-      0,
-      0,
-      0
+      1
     ]
   },
   "pippo": {
     "username": "pippo",
     "password": "password123",
     "totalScore": 0,
-    "gamesPlayed": 0,
+    "gamesPlayed": 1,
     "gamesWon": 0,
     "currentStreak": 0,
     "maxStreak": 0,
     "perfectPuzzle": 0,
     "mistakeHistogram": [
-      0,
+      1,
       0,
       0,
       0,
