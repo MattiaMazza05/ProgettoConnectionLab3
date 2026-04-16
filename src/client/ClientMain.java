@@ -11,12 +11,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import common.MessageReader;
 
 public class ClientMain {
     public static void main(String[] args) {
-
         try {
             Properties config = new Properties();
             try (InputStream in = new FileInputStream("config/client.properties")) {
@@ -36,19 +36,33 @@ public class ClientMain {
             }
             socketChannel.register(selector, SelectionKey.OP_READ);
             System.out.println("Connesso con successo al server " + serverIp + ":" + serverPort);
-            // --- INIZIO TEST HARDCODATO (PUNTO 4) ---
-            // Invio manuale di una richiesta di LOGIN (sostituisci con le tue credenziali
-            // se diverse)
-            String testRequest = "{\"operation\": \"login\", \"username\": \"mario\", \"psw\": \"rossi123\", \"udpPort\": 9000}\n";
-            ByteBuffer writeBuffer = ByteBuffer.wrap(testRequest.getBytes("UTF-8"));
-            socketChannel.write(writeBuffer);
-            System.out.println("Richiesta di test (login) inviata!");
-            // --- FINE TEST HARDCODATO ---
 
+            ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
             ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
+            UdpListener udpListener = new UdpListener();
+            Thread t = new Thread(udpListener);
+            t.setDaemon(true); // setto il thread come Deamon in modo tale che quando chiudo il client venga
+                               // chiuso anche questo thread
+            t.start();
+            int udpPort = Integer.parseInt(config.getProperty("udp.port"));
+            CliThread cliTask = new CliThread(queue, selector, udpPort);
+            Thread cliThread = new Thread(cliTask);
+            cliThread.setDaemon(true);
+            cliThread.start();
             while (true) {
                 selector.select();
+                String messageCli;
+                while ((messageCli = queue.poll()) != null) {
+                    try {
+                        ByteBuffer writeBuffer = ByteBuffer.wrap(messageCli.getBytes("UTF-8"));
+                        while (writeBuffer.hasRemaining()) {
+                            socketChannel.write(writeBuffer);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Errore durante l'invio del messaggio: " + e.getMessage());
+                    }
+                }
                 Set<SelectionKey> readyKeys = selector.selectedKeys();
                 Iterator<SelectionKey> iterator = readyKeys.iterator();
 
