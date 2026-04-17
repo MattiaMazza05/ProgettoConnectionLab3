@@ -1,47 +1,13 @@
 {
-  "Aurora": {
-    "username": "Aurora",
-    "password": "12345",
-    "totalScore": 0,
-    "gamesPlayed": 0,
-    "gamesWon": 0,
-    "currentStreak": 0,
-    "maxStreak": 0,
-    "perfectPuzzle": 0,
-    "mistakeHistogram": [
-      0,
-      0,
-      0,
-      0,
-      0
-    ]
-  },
-  "mario": {
-    "username": "mario",
-    "password": "rossi123",
-    "totalScore": 0,
-    "gamesPlayed": 4,
-    "gamesWon": 0,
-    "currentStreak": 0,
-    "maxStreak": 0,
-    "perfectPuzzle": 0,
-    "mistakeHistogram": [
-      2,
-      1,
-      0,
-      0,
-      1
-    ]
-  },
-  "pippo": {
-    "username": "pippo",
-    "password": "password123",
-    "totalScore": 0,
+  "Matti": {
+    "username": "Matti",
+    "password": "Matti",
+    "totalScore": 18,
     "gamesPlayed": 1,
-    "gamesWon": 0,
-    "currentStreak": 0,
-    "maxStreak": 0,
-    "perfectPuzzle": 0,
+    "gamesWon": 1,
+    "currentStreak": 1,
+    "maxStreak": 1,
+    "perfectPuzzle": 1,
     "mistakeHistogram": [
       1,
       0,

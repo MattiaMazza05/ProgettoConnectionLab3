@@ -260,6 +260,7 @@ public class ServerMain {
                                                                 lbElement.addProperty("score", leaderbord.get(i).score);
                                                                 jsonList.add(lbElement);
                                                             }
+                                                            answer.add("leaderboard", jsonList);
                                                         } else {
                                                             answer.addProperty("status", "ok");
                                                             JsonArray jsonList = new JsonArray();
@@ -278,7 +279,8 @@ public class ServerMain {
                                                         answer.addProperty("status", "error");
                                                         answer.addProperty("message", "Utente non loggato.");
                                                     } else {
-                                                        JsonObject stats = userManager.requestPlayerStats(session.LoggedUsername);
+                                                        JsonObject stats = userManager
+                                                                .requestPlayerStats(session.LoggedUsername);
                                                         answer = stats;
                                                     }
                                                     break;

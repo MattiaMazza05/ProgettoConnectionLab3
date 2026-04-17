@@ -84,7 +84,7 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
             return;
         }
         u.gamesPlayed++;
-        u.totalScore *= score;
+        u.totalScore += score;
         u.mistakeHistogram[mistakes]++;
 
         if (won) {
