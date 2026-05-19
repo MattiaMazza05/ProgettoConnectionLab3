@@ -178,4 +178,8 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
         r.add("mistakeHistogram", hist);
         return r;
     }
+
+    public synchronized List<String> getLoggedUsers(){
+        return new ArrayList<>(loggedIn);
+    }
 }

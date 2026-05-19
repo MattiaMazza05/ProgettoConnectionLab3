@@ -163,11 +163,12 @@ public class ServerMain {
                                                     if (resLogin.status.equals("ok")) {
                                                         session.LoggedUsername = loginName;
                                                         session.clientPort = udpPort;
+                                                        gameManager.joinCurrentGame(loginName);
                                                         InetSocketAddress remoteAddress = (InetSocketAddress) client
                                                                 .getRemoteAddress();
                                                         session.clInetAddress = remoteAddress.getAddress();
-                                                        gameManager.joinCurrentGame(loginName);
                                                         userManager.addSession(session);
+                                                        
                                                     }
                                                     break;
                                                 case "logout":

@@ -82,9 +82,12 @@ public class CliThread implements Runnable {
                             ClientMain.waitingForResponse = true;
                             queue.add(gameWords.toString() + "\n");
                             selector.wakeup();
-                            
+
                             while (ClientMain.waitingForResponse) {
-                                try { Thread.sleep(100); } catch (InterruptedException e) {}
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException e) {
+                                }
                             }
                         }
                         break;
@@ -121,7 +124,10 @@ public class CliThread implements Runnable {
                         selector.wakeup();
 
                         while (ClientMain.waitingForResponse) {
-                            try { Thread.sleep(100); } catch (InterruptedException e) {}
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                            }
                         }
                         JsonObject submitProposal = new JsonObject();
                         submitProposal.addProperty("operation", "submitProposal");
@@ -145,18 +151,28 @@ public class CliThread implements Runnable {
                         }
                         break;
                     case "2":
-                        JsonObject reqGameInfo = new JsonObject();
-                        reqGameInfo.addProperty("operation", "requestGameInfo");
-                        reqGameInfo.addProperty("gameId", -1);
-                        ClientMain.waitingForResponse = true;
-                        queue.add(reqGameInfo.toString() + "\n");
-                        selector.wakeup();
-                        while (ClientMain.waitingForResponse) {
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
+                        System.out.println(
+                                "Che info partita vuoi? (Digita -1 se vuoi quelle della partita corrente, oppure digita il game id di una partita vecchia)");
+                        String gamePreference = in.nextLine().trim();
+                        int gameId = -1;
+                        try {
+                            gameId = Integer.parseInt(gamePreference);
+                            JsonObject reqGameInfo = new JsonObject();
+                            reqGameInfo.addProperty("operation", "requestGameInfo");
+                            reqGameInfo.addProperty("gameId", gameId);
+                            ClientMain.waitingForResponse = true;
+                            queue.add(reqGameInfo.toString() + "\n");
+                            selector.wakeup();
+                            while (ClientMain.waitingForResponse) {
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException e) {
+                                }
                             }
+                        } catch (NumberFormatException e) {
+                            System.out.println("Errore devi inserire un numero valido!");
                         }
+
                         break;
                     case "3":
                         JsonObject reqGameStats = new JsonObject();

@@ -120,6 +120,19 @@ public class ClientMain {
             }
 
             // info partita
+            if (response.has("gameId")) {
+                System.out.println("\n--- Info Partita ID: " + response.get("gameId").getAsInt() + " ---");
+            }
+            if (response.has("status") && (response.get("status").getAsString().equals("ongoing") || response.get("status").getAsString().equals("finished"))) {
+                System.out.println("- Stato partita: " + response.get("status").getAsString());
+            }
+            if (response.has("solution")) {
+                if (response.get("solution").isJsonPrimitive()) {
+                    System.out.println("- Soluzione: " + response.get("solution").getAsString());
+                } else {
+                    System.out.println("- Soluzione: " + response.get("solution").getAsJsonArray().toString());
+                }
+            }
             if (response.has("timeRemaining")) {
                 System.out.println("- Tempo rimasto ⏱️: " + response.get("timeRemaining").getAsInt() + " sec");
             }

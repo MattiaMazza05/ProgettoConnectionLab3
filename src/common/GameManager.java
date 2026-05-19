@@ -47,6 +47,9 @@ public class GameManager {
                 return;
             }
             playerState.clear();
+            for (String username : userManager.getLoggedUsers()) {
+                playerState.put(username, new PlayerGameState());
+            }
             gameEndTime = System.currentTimeMillis() + (gameDurationSeconds * 1000L);
             System.out.println("Nuova partita avviata!");
             timer.schedule(this::onGameEnd, gameDurationSeconds, TimeUnit.SECONDS);
@@ -72,7 +75,7 @@ public class GameManager {
                 finishedPlayers++;
             }
 
-            if (state.correctGroups != null && state.correctGroups.size() == 3) {
+            if (state.correctGroups != null && state.correctGroups.size() == 4) {
                 winnersCount++;
             }
         }
@@ -190,6 +193,13 @@ public class GameManager {
         if (System.currentTimeMillis() > gameEndTime) {
             return ServerResponse.err("Tempo esaurito.");
         }
+        for (PuzzleData.Group g : state.correctGroups) {
+            for (String w : words) {
+                if (g.words.contains(w)) {
+                    return ServerResponse.err("Proposta malformata: contiene parole già assegnate.");
+                }
+            }
+        }
         List<String> wordsToCheck = new ArrayList<>(noDuplicates);
         PuzzleData.Group matchedGroup = findMatchingGroup(wordsToCheck, state);
         if (matchedGroup == null) {
@@ -211,11 +221,27 @@ public class GameManager {
             int bonus = bonusGroup * 6;
             state.score = bonus - (state.mistakes * 4);
             if (state.correctGroups.size() == 3) {
+                // Aggiungiamo automaticamente il quarto gruppo rimanente
+                for (PuzzleData.Group g : currentPuzzle.groups) {
+                    if (!state.correctGroups.contains(g)) {
+                        state.correctGroups.add(g);
+                        break;
+                    }
+                }
+
+                // Aggiorniamo il punteggio considerando il 4° gruppo trovato e aggiornando il
+                // check a vittoria
+                state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
                 state.finished = true;
                 userManager.recordGameResult(username, true, state.mistakes, state.score);
             }
 
-            ProposalResponse response = new ProposalResponse("ok", "Corretto Tema: " + matchedGroup.theme);
+            String msg = "Corretto Tema: " + matchedGroup.theme;
+            if (state.finished) {
+                msg += "\n🎉 COMPLIMENTI! Hai indovinato tutti i gruppi! Hai completato la partita.";
+            }
+
+            ProposalResponse response = new ProposalResponse("ok", msg);
             response.groupFound = matchedGroup;
             response.score = state.score;
             response.mistakes = state.mistakes;
@@ -248,8 +274,7 @@ public class GameManager {
         Gson gson = new Gson();
         JsonObject r = new JsonObject();
 
-        if (gameId == -1 || gameId == currentPuzzle.gameId) { // uso -1 per indicare che l'utente vuole le statistiche
-                                                              // della partita corrente, dato che i game iniziano da 0
+        if (gameId == -1 || gameId == currentPuzzle.gameId) {
             PlayerGameState state = playerState.get(username);
 
             if (state == null) {
@@ -258,8 +283,11 @@ public class GameManager {
                 return r;
             }
 
-            if (System.currentTimeMillis() < gameEndTime && !state.finished) {
+            // Se la partita globale è ancora in corso
+            if (System.currentTimeMillis() < gameEndTime) {
                 r.addProperty("status", "ongoing");
+                r.addProperty("gameId", currentPuzzle.gameId);
+                r.addProperty("solution", "segreta");
                 r.addProperty("timeRemaining", (gameEndTime - System.currentTimeMillis()) / 1000);
                 r.addProperty("score", state.score);
                 r.addProperty("mistakes", state.mistakes);
@@ -272,14 +300,18 @@ public class GameManager {
                 r.add("correctGroups", gson.toJsonTree(state.correctGroups));
                 return r;
             } else {
+                // Se la partita corrente è ormai finita globalmente
                 r.addProperty("status", "finished");
+                r.addProperty("gameId", currentPuzzle.gameId);
                 r.add("solution", gson.toJsonTree(currentPuzzle.groups));
-                r.addProperty("correctCount", state.correctGroups.size());
+
+                r.add("correctGroups", gson.toJsonTree(state.correctGroups));
                 r.addProperty("mistakes", state.mistakes);
                 r.addProperty("score", state.score);
                 return r;
             }
         }
+
         GameRecord record = getHistoricalgame(gameId);
 
         if (record == null) {
@@ -288,7 +320,6 @@ public class GameManager {
             return r;
         }
 
-        // Continua con il resto del tuo codice...
         PlayerGameState oldState = record.finalStates.get(username);
         if (oldState == null) {
             r.addProperty("status", "error");
@@ -297,8 +328,9 @@ public class GameManager {
         }
 
         r.addProperty("status", "finished");
+        r.addProperty("gameId", record.gameId);
         r.add("solution", gson.toJsonTree(record.solution));
-        r.addProperty("correctCount", oldState.correctGroups.size());
+        r.add("correctGroups", gson.toJsonTree(oldState.correctGroups));
         r.addProperty("mistakes", oldState.mistakes);
         r.addProperty("score", oldState.score);
         return r;
@@ -306,7 +338,14 @@ public class GameManager {
 
     public JsonObject requestGameStats(int gameId) {
         JsonObject r = new JsonObject();
-        if (gameId == -1 || gameId == currentPuzzle.gameId) {// anche qua uso -1 per indicare la partita corrente
+        if (gameId == -1 || gameId == currentPuzzle.gameId) {
+            // Se chiede specificamente il numero della partita corrente, ma non è conclusa
+            if (gameId == currentPuzzle.gameId && System.currentTimeMillis() < gameEndTime) {
+                r.addProperty("status", "error");
+                r.addProperty("message", "La partita selezionata non e' ancora conclusa.");
+                return r;
+            }
+
             int total = playerState.size();
             int finished = 0;
             int winners = 0;
@@ -315,7 +354,7 @@ public class GameManager {
                 if (state.finished) {
                     finished++;
                 }
-                if (state.correctGroups != null && state.correctGroups.size() == 3) {
+                if (state.correctGroups != null && state.correctGroups.size() == 4) {
                     winners++;
                 }
             }
@@ -334,7 +373,7 @@ public class GameManager {
             r.addProperty("message", "Partita non trovata");
             return r;
         }
-        //ritorno i valori di una partita vecchia
+        // ritorno i valori di una partita vecchia
         r.addProperty("status", "ok");
         r.addProperty("totalPlayers", record.finalStates.size());
         r.addProperty("playingPlayers", 0);
