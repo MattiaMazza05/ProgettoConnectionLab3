@@ -49,6 +49,14 @@ public class ServerMain {
         PuzzleRepository puzzleRepo = new PuzzleRepository("data/Connections_Data.json");
         common.UdpNotifier udpNotifier = new common.UdpNotifier(udpPort);
         GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager, udpNotifier);
+        gameManager.loadHistory(); // carico cronologia partite da json
+
+        int lastGameId = gameManager.getNextGameId();
+        if (lastGameId >= 0) {
+            // Impostiamo l'indice del puzzle repository in modo che salti le partite già
+            // giocate
+            puzzleRepo.setCurrentIndex(lastGameId + 1);
+        }
 
         gameManager.startNewGame();
         Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante e
@@ -57,22 +65,25 @@ public class ServerMain {
         serverChannel.configureBlocking(false);
         serverChannel.bind(new InetSocketAddress(tcpPort));
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-        System.out.println("Server NIO in ascolto sulla porta 8080...");
+        System.out.println("Server NIO in ascolto sulla porta " + tcpPort + "...");
         ExecutorService pool = Executors.newFixedThreadPool(10); // fisso un thread pool a 10 thread per le varie
                                                                  // operazioni
         ScheduledExecutorService timedSaves = Executors.newSingleThreadScheduledExecutor(); // creo un salvataggio
-                                                                                            // periodico ogni 10 secondi
+                                                                                            // periodico ogni x secondi
 
         Runnable saves = new Runnable() {
             @Override
             public void run() {
                 userManager.save();
+                gameManager.saveHistory(); // persistenza periodica cronologia partite
             }
         };
         timedSaves.scheduleAtFixedRate(saves, 0, persistenceInterval, TimeUnit.SECONDS);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> userManager.save())); // mi assicuro inoltre che alla
-                                                                                    // chiusura del server venga salvato
-                                                                                    // lo stato attuale
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            userManager.save();
+            gameManager.saveHistory();
+        })); // mi assicuro inoltre che alla chiusura del server venga salvato lo stato
+             // finale
 
         while (true) { // ciclo infinito per le richieste
             selector.select();
@@ -100,6 +111,7 @@ public class ServerMain {
                         if (bytesRead == -1) {
                             System.out.println("Client disconnesso.");
                             userManager.logout(session);
+                            userManager.removeSession(session);
                             key.cancel();
                             client.close();
                         } else {
@@ -168,7 +180,7 @@ public class ServerMain {
                                                                 .getRemoteAddress();
                                                         session.clInetAddress = remoteAddress.getAddress();
                                                         userManager.addSession(session);
-                                                        
+
                                                     }
                                                     break;
                                                 case "logout":
@@ -176,6 +188,7 @@ public class ServerMain {
                                                         answer.addProperty("status", "error");
                                                         answer.addProperty("message", "Utente non loggato.");
                                                     } else {
+                                                        gameManager.leaveCurrentGame(session.LoggedUsername);
                                                         userManager.logout(session);
                                                         userManager.removeSession(session);
                                                         answer.addProperty("status", "ok");
@@ -313,6 +326,12 @@ public class ServerMain {
                     }
                 } catch (IOException e) {
                     // Se un client crasha, cancelliamo la chiave e chiudiamo il canale
+                    ClientSession session = (ClientSession) key.attachment();
+                    if (session != null) {
+                        gameManager.leaveCurrentGame(session.LoggedUsername);
+                        userManager.logout(session);
+                        userManager.removeSession(session);
+                    }
                     key.cancel();
                     key.channel().close();
                 }

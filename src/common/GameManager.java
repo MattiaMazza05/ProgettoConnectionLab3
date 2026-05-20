@@ -8,7 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
+import java.lang.reflect.Type;
+import com.google.gson.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -25,7 +26,8 @@ public class GameManager {
     private final PuzzleRepository puzzleRepo;
     private final int gameDurationSeconds;
     private final UdpNotifier udpNotifier;
-    private final List<GameRecord> gameHistory = new ArrayList<>();
+    private List<GameRecord> gameHistory = new ArrayList<>();
+    private final String historyFilePath = "data/gameHistory.json";
 
     public GameManager(PuzzleRepository puzzleRepo, int gameDurationSeconds, UserManager userManager,
             UdpNotifier udpNotifier) {
@@ -95,7 +97,6 @@ public class GameManager {
             record.finishedCount = finishedPlayers;
             record.winnersCount = winnersCount;
             record.agvScore = gameNotification.agvScore;
-            record.date = new java.util.Date().toString();
             gameHistory.add(record);
         }
 
@@ -187,7 +188,7 @@ public class GameManager {
         if (!wordsInGame.containsAll(noDuplicates)) {
             return ServerResponse.err("Proposta malformata: parole non presenti nel puzzle.");
         }
-        if (state.mistakes >= 4) {
+        if (state.mistakes == 4) {
             return ServerResponse.err("Hai commesso 4 errori, tentativi esauriti.");
         }
         if (System.currentTimeMillis() > gameEndTime) {
@@ -208,6 +209,11 @@ public class GameManager {
                 state.finished = true;
                 state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
                 userManager.recordGameResult(username, false, state.mistakes, state.score);
+                ProposalResponse response = new ProposalResponse("error", "Hai esaurito i 4 tentativi. Partita finita");
+                response.mistakes = state.mistakes;
+                response.score = state.score;
+                response.won = false;
+                return response;
             } else {
                 state.score = (state.correctGroups.size() * 6) - (state.mistakes * 4);
             }
@@ -242,6 +248,7 @@ public class GameManager {
             }
 
             ProposalResponse response = new ProposalResponse("ok", msg);
+            
             response.groupFound = matchedGroup;
             response.score = state.score;
             response.mistakes = state.mistakes;
@@ -282,7 +289,6 @@ public class GameManager {
                 r.addProperty("message", "Non stai partecipando a questa partita");
                 return r;
             }
-
             // Se la partita globale è ancora in corso
             if (System.currentTimeMillis() < gameEndTime) {
                 r.addProperty("status", "ongoing");
@@ -316,7 +322,7 @@ public class GameManager {
 
         if (record == null) {
             r.addProperty("status", "error");
-            r.addProperty("message", "Partita non trovata.");
+            r.addProperty("message", "Partita non ancora giocata o non trovata.");
             return r;
         }
 
@@ -338,33 +344,43 @@ public class GameManager {
 
     public JsonObject requestGameStats(int gameId) {
         JsonObject r = new JsonObject();
+        if (gameId != -1 && currentPuzzle != null && gameId> currentPuzzle.gameId) {
+            r.addProperty("status", "error");
+            r.addProperty("message", "Partita non ancora giocata.");
+            return r;
+        }
         if (gameId == -1 || gameId == currentPuzzle.gameId) {
-            // Se chiede specificamente il numero della partita corrente, ma non è conclusa
-            if (gameId == currentPuzzle.gameId && System.currentTimeMillis() < gameEndTime) {
-                r.addProperty("status", "error");
-                r.addProperty("message", "La partita selezionata non e' ancora conclusa.");
-                return r;
-            }
-
             int total = playerState.size();
-            int finished = 0;
-            int winners = 0;
+            int finished = 0, winners = 0, sumScore = 0;
 
-            for (PlayerGameState state : playerState.values()) {
+            for(PlayerGameState state : playerState.values()){
                 if (state.finished) {
-                    finished++;
+                    finished ++;
                 }
                 if (state.correctGroups != null && state.correctGroups.size() == 4) {
-                    winners++;
+                    winners ++;
                 }
+                sumScore += state.score;
             }
-
-            r.addProperty("status", "ok");
-            r.addProperty("totalPlayers", total);
-            r.addProperty("playingPlayers", total - finished);
-            r.addProperty("finishedPlayers", finished);
-            r.addProperty("winnersCount", winners);
-            return r;
+            if (System.currentTimeMillis() < gameEndTime) {
+                r.addProperty("status", "ongoing"); 
+                r.addProperty("totalPlayers", total);
+                r.addProperty("finishedPlayers", finished);
+                r.addProperty("winnersCount", winners);
+                r.addProperty("timeRemaining", (gameEndTime - System.currentTimeMillis()) / 1000); 
+                return r;
+            }else{
+                r.addProperty("status", "finished");
+                r.addProperty("totalPlayers", total);
+                r.addProperty("finishedPlayers", finished);
+                r.addProperty("winnersCount", winners);
+                if (total > 0) {
+                    r.addProperty("avgScore", (double)sumScore / total);
+                } else {
+                    r.addProperty("avgScore", 0.0);
+                }
+                return r;
+            }
         }
 
         GameRecord record = getHistoricalgame(gameId);
@@ -374,11 +390,43 @@ public class GameManager {
             return r;
         }
         // ritorno i valori di una partita vecchia
-        r.addProperty("status", "ok");
+        r.addProperty("status", "finished");
         r.addProperty("totalPlayers", record.finalStates.size());
-        r.addProperty("playingPlayers", 0);
         r.addProperty("finishedPlayers", record.finishedCount);
         r.addProperty("winnersCount", record.winnersCount);
+        r.addProperty("avgScore", record.agvScore);
         return r;
     }
+
+    public synchronized int getNextGameId() { // questo metodo mi serve per tenere aggiornato un contatore per evitare
+                                              // che ad ogni riavvio parta sempre dalla partita 0
+        int max = -1;
+        for (GameRecord record : gameHistory) {
+            if (record.gameId > max) {
+                max = record.gameId;
+            }
+        }
+        return max;
+    }
+
+    public synchronized void loadHistory() {
+        Type historyType = new TypeToken<List<GameRecord>>() {
+        }.getType();
+        List<GameRecord> loaded = JsonPersistence.readJson(historyFilePath, historyType);
+        if (loaded != null) {
+            gameHistory = loaded;
+        }
+    }
+
+    public synchronized void saveHistory() {
+        JsonPersistence.writeJson(historyFilePath, gameHistory);
+    }
+    
+    public synchronized void leaveCurrentGame(String username){
+        PlayerGameState state = playerState.get(username);
+        if(state != null ){
+           playerState.remove(username);
+        }
+    }
+
 }

@@ -47,12 +47,13 @@ public class ClientMain {
             ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
             ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
+            int udpPort = -1;
             UdpListener udpListener = new UdpListener();
+            udpPort = udpListener.initSocket();
             Thread t = new Thread(udpListener);
             t.setDaemon(true); // setto il thread come Deamon in modo tale che quando chiudo il client venga
                                // chiuso anche questo thread
             t.start();
-            int udpPort = Integer.parseInt(config.getProperty("udp.port"));
             CliThread cliTask = new CliThread(queue, selector, udpPort);
             Thread cliThread = new Thread(cliTask);
             cliThread.setDaemon(true);
@@ -123,12 +124,13 @@ public class ClientMain {
             if (response.has("gameId")) {
                 System.out.println("\n--- Info Partita ID: " + response.get("gameId").getAsInt() + " ---");
             }
-            if (response.has("status") && (response.get("status").getAsString().equals("ongoing") || response.get("status").getAsString().equals("finished"))) {
+            if (response.has("status") && (response.get("status").getAsString().equals("ongoing")
+                    || response.get("status").getAsString().equals("finished"))) {
                 System.out.println("- Stato partita: " + response.get("status").getAsString());
             }
             if (response.has("solution")) {
                 if (response.get("solution").isJsonPrimitive()) {
-                    System.out.println("- Soluzione: " + response.get("solution").getAsString());
+                    System.out.println("- Soluzione : " + response.get("solution").getAsString());
                 } else {
                     System.out.println("- Soluzione: " + response.get("solution").getAsJsonArray().toString());
                 }
@@ -140,7 +142,7 @@ public class ClientMain {
                 System.out.println("- Punteggio 💯: " + response.get("score").getAsInt());
             }
             if (response.has("mistakes")) {
-                System.out.println("- Errori : " + response.get("mistakes").getAsInt());
+                System.out.println("- Errori 🙈: " + response.get("mistakes").getAsInt());
             }
             // parole
             if (response.has("words")) {
@@ -168,23 +170,20 @@ public class ClientMain {
             }
 
             // Statistiche partita
-            if (response.has("activePlayers")) {
-                System.out.println("- Giocatori attivi in partita 🛜: " + response.get("activePlayers").getAsInt());
-            } else if (response.has("playingPlayers")) {
-                System.out.println(
-                        "- Giocatori online in partita : " + response.get("playingPlayers").getAsInt());
+            if (response.has("totalPlayers")) {
+                System.out.println("- Giocatori totali in partita ⌛️: " + response.get("totalPlayers").getAsInt());
             }
 
             if (response.has("finishedPlayers")) {
-                System.out.println("- Giocatori che hanno finito: " + response.get("finishedPlayers").getAsInt());
+                System.out.println("- Giocatori che hanno finito ✅: " + response.get("finishedPlayers").getAsInt());
+            }
+            if (response.has("winnersCount")) {
+                System.out.println("- Giocatori che hanno vinto 🏆: " + response.get("winnersCount").getAsInt());
             }
 
-            if (response.has("winningPlayers")) {
-                System.out.println("- Giocatori che hanno vinto: " + response.get("winningPlayers").getAsInt());
-            } else if (response.has("winnersCount")) {
-                System.out.println("- Giocatori che hanno vinto: " + response.get("winnersCount").getAsInt());
+            if (response.has("avgScore")) {
+                System.out.println("- Punteggio medio : " + response.get("avgScore").getAsDouble());
             }
-
             // statistiche giocatore
             if (response.has("gamesPlayed")) {
                 System.out.println("- Partite Giocate: " + response.get("gamesPlayed").getAsInt());

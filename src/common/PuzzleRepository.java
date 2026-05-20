@@ -39,4 +39,14 @@ public class PuzzleRepository {
         }
         return puzzles.get(currentIndex++);
     }
+
+    public synchronized void setCurrentIndex(int index){
+        if(index<0){
+            currentIndex = 0;
+        }else if(currentIndex > puzzles.size()){
+            currentIndex = puzzles.size();
+        }else{
+            currentIndex = index;
+        }
+    }
 }

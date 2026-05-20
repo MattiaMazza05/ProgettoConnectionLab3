@@ -5,7 +5,6 @@ import java.util.Map;
 
 public class GameRecord {
     public int gameId;
-    public String date;
     public List<PuzzleData.Group> solution;
     public Map<String, PlayerGameState> finalStates;
     public int totalPlayers;

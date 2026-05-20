@@ -1,46 +1,68 @@
 package client;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.util.Properties;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 public class UdpListener implements Runnable {
     Gson gson = new Gson();
+    DatagramSocket dS = null;
+    int port = -1;
+
+    public int initSocket() throws SocketException {
+        dS = new DatagramSocket(0);
+        dS.setSoTimeout(1000);
+        this.port = dS.getLocalPort();
+        return port;
+    }
 
     @Override
     public void run() {
-        int udpPort = -1;
-        Properties config = new Properties();
-        try (InputStream in = new FileInputStream("config/client.properties")) {
-            config.load(in);
-            udpPort = Integer.parseInt(config.getProperty("udp.port"));
-        } catch (Exception e) {
-            System.err.println("Errore di caricamento client.properties nel UdpListener: " + e.getMessage());
+        if (dS == null) {
+            System.err.println("Errore: datagramSocket non inizializzato.");
             return;
         }
-        try (DatagramSocket dS = new DatagramSocket(udpPort)) {
-            dS.setSoTimeout(1000);
-            System.out.println("[UDP] In ascolto per notifiche sulla porta: " + udpPort);
-            while (true) {
-                byte[] buffer = new byte[8192];
-                DatagramPacket dP = new DatagramPacket(buffer, buffer.length);
+        System.out.println("[UDP] In ascolto per notifiche sulla porta: " + port);
+        while (true) {
+            byte[] buffer = new byte[8192];
+            DatagramPacket dP = new DatagramPacket(buffer, buffer.length);
+            try {
+                dS.receive(dP);
+                String recivedString = new String(dP.getData(), 0, dP.getLength(), "UTF-8");
                 try {
-                    dS.receive(dP);
-                    String recivedString = new String(dP.getData(), 0, dP.getLength(), "UTF-8");
+                    JsonObject gameEnd = com.google.gson.JsonParser.parseString(recivedString).getAsJsonObject();
+                    System.out.println("\n===== [NOTIFICA DAL SERVER: PARTITA TERMINATA 🔔] =====");
+                    System.out.println(
+                            "- Giocatori totali che hanno partecipato: " + gameEnd.get("totalPlayers").getAsInt());
+                    System.out.println(
+                            "- Giocatori che hanno concluso in tempo: " + gameEnd.get("finishedPlayers").getAsInt());
+                    System.out.println("- Vincitori totali: " + gameEnd.get("winnersCount").getAsInt());
+                    System.out.println("- Punteggio medio: " + gameEnd.get("agvScore").getAsDouble());
+                    System.out.println("- LA SOLUZIONE COMPLETA ERA:");
+
+                    com.google.gson.JsonArray solutionArray = gameEnd.getAsJsonArray("solution");
+                    for (int i = 0; i < solutionArray.size(); i++) {
+                        JsonObject group = solutionArray.get(i).getAsJsonObject();
+                        System.out.println("  > TEMA: " + group.get("theme").getAsString() + " -> "
+                                + group.get("words").getAsJsonArray().toString());
+                    }
+                    System.out.println("=======================================================\n");
+
+                } catch (Exception e) {
                     System.out.println("\n[NOTIFICA DAL SERVER]: " + recivedString);
-
-                } catch (SocketTimeoutException e) {
-                    continue;
                 }
-            }
-        } catch (Exception e) {
-            System.err.println("Errore nel listener UDP: " + e.getMessage());
-        }
 
+            } catch (SocketTimeoutException e) {
+                continue;
+            } catch (Exception e) {
+                System.err.println("Errore nel listener UDP: " + e.getMessage());
+                break;
+            }
+        }
+        dS.close();
     }
 }

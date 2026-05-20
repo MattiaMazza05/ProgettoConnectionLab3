@@ -3,13 +3,30 @@
     "username": "Auri",
     "password": "Auri",
     "totalScore": 66,
-    "gamesPlayed": 5,
+    "gamesPlayed": 18,
     "gamesWon": 3,
-    "currentStreak": 2,
+    "currentStreak": 0,
     "maxStreak": 2,
     "perfectPuzzle": 3,
     "mistakeHistogram": [
-      5,
+      18,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "test": {
+    "username": "test",
+    "password": "test",
+    "totalScore": 42,
+    "gamesPlayed": 10,
+    "gamesWon": 1,
+    "currentStreak": 0,
+    "maxStreak": 1,
+    "perfectPuzzle": 1,
+    "mistakeHistogram": [
+      10,
       0,
       0,
       0,
@@ -19,18 +36,18 @@
   "Matti": {
     "username": "Matti",
     "password": "Matti",
-    "totalScore": 86,
-    "gamesPlayed": 7,
-    "gamesWon": 4,
-    "currentStreak": 3,
-    "maxStreak": 3,
-    "perfectPuzzle": 4,
+    "totalScore": 122,
+    "gamesPlayed": 28,
+    "gamesWon": 7,
+    "currentStreak": 0,
+    "maxStreak": 5,
+    "perfectPuzzle": 7,
     "mistakeHistogram": [
-      6,
-      1,
+      24,
+      2,
       0,
       0,
-      0
+      2
     ]
   }
 }

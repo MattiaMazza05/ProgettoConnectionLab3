@@ -175,17 +175,28 @@ public class CliThread implements Runnable {
 
                         break;
                     case "3":
-                        JsonObject reqGameStats = new JsonObject();
-                        reqGameStats.addProperty("operation", "requestGameStats");
-                        reqGameStats.addProperty("gameId", -1);
-                        ClientMain.waitingForResponse = true;
-                        queue.add(reqGameStats.toString() + "\n");
-                        selector.wakeup();
-                        while (ClientMain.waitingForResponse) {
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
+                        System.out.println(
+                                "Che statistiche partita vuoi? (Digita -1 se vuoi quelle della partita corrente, oppure digita il game id di una partita vecchia)");
+                        String statsPreference = in.nextLine().trim();
+                        int statsId = -1;
+                        try {
+                            statsId = Integer.parseInt(statsPreference);
+                            JsonObject reqGameStats = new JsonObject();
+                            reqGameStats.addProperty("operation", "requestGameStats");
+                            reqGameStats.addProperty("gameId", statsId);
+                            ClientMain.waitingForResponse = true;
+                            queue.add(reqGameStats.toString() + "\n");
+                            selector.wakeup();
+                            while (ClientMain.waitingForResponse) {
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException e) {
+                                }
                             }
+
+                        } catch (NumberFormatException e) {
+                            System.out.println("Errore devi inserire un numero valido!");
+
                         }
                         break;
                     case "4":
