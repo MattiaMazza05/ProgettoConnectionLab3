@@ -3,6 +3,7 @@ package server;
 import java.lang.reflect.Type;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
@@ -73,7 +74,7 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
         }
     }
 
-    public synchronized void logout(ClientSession session) {
+    public synchronized void logout(ClientSession session) {// se l'utente è loggato lo rimuovo dalla lista e imposto a null loggedUsername
         if (session.LoggedUsername != null) {
             loggedIn.remove(session.LoggedUsername);
             session.LoggedUsername = null;
@@ -107,7 +108,7 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
         }
     }
 
-    public void removeSession(ClientSession session) {
+    public void removeSession(ClientSession session) {//rimuovo dalle sessioni attive
         activeSession.remove(session);
     }
 
@@ -173,7 +174,7 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
         r.addProperty("currentStreak", u.currentStreak);
         r.addProperty("maxStreak", u.maxStreak);
         r.addProperty("perfectPuzzle", u.perfectPuzzle);
-        com.google.gson.JsonArray hist = new com.google.gson.JsonArray();
+        JsonArray hist = new JsonArray();
         for (int val : u.mistakeHistogram) {
             hist.add(val);
         }

@@ -11,7 +11,7 @@ public class JsonPersistence { //salvataggio dati su file json
     public static synchronized void writeJson(String filePath, Object data) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create(); //metto setPrettyPrinting per avere il file users.json ben formattato
         String json = gson.toJson(data);
-        try (FileWriter w = new FileWriter(filePath + ".tmp")) {
+        try (FileWriter w = new FileWriter(filePath + ".tmp")) {// scrivo su un file temporaneo, se la scrittura va a buon fine rinomino, altrimenti lascio cosi com'è
             w.append(json);
         } catch (Exception e) {
             System.out.println(e);

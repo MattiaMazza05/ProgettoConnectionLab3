@@ -49,25 +49,21 @@ public class ServerMain {
         gameManager.loadHistory(); // carico cronologia partite da json
 
         int lastGameId = gameManager.getNextGameId();
-        if (lastGameId >= 0) {
-            // Impostiamo l'indice del puzzle repository in modo che salti le partite già
-            // giocate
+        if (lastGameId >= 0) { //imposto l'indice al gioco successivo 
             puzzleRepo.setCurrentIndex(lastGameId + 1);
         }
 
         gameManager.startNewGame();
-        Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante e
-                                             // sulla porta 8080
+        Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante 
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(false);
         serverChannel.bind(new InetSocketAddress(tcpPort));
-        serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+        serverChannel.register(selector, SelectionKey.OP_ACCEPT); //lo registro per accettare connessioni
         System.out.println("Server NIO in ascolto sulla porta " + tcpPort + "...");
         ExecutorService pool = Executors.newFixedThreadPool(10); // fisso un thread pool a 10 thread per le varie
                                                                  // operazioni
         ScheduledExecutorService timedSaves = Executors.newSingleThreadScheduledExecutor(); // creo un salvataggio
                                                                                             // periodico ogni x secondi
-
         Runnable saves = new Runnable() {
             @Override
             public void run() {
@@ -83,8 +79,8 @@ public class ServerMain {
              // finale
 
         while (true) { // ciclo infinito per le richieste
-            selector.select();
-            Set<SelectionKey> readyKeys = selector.selectedKeys();
+            selector.select(); // server si mette in attesa
+            Set<SelectionKey> readyKeys = selector.selectedKeys();//quando arriva una richiesta prendo le chiavi pronte e le itero
             Iterator<SelectionKey> iterator = readyKeys.iterator();
 
             while (iterator.hasNext()) {
@@ -165,19 +161,18 @@ public class ServerMain {
                                                 case "login":
                                                     String loginName = request.get("username").getAsString();
                                                     String loginPsw = request.get("psw").getAsString();
-                                                    int udpPort = request.get("udpPort").getAsInt();
+                                                    int udpPort = request.get("udpPort").getAsInt(); //prendo anche la porta udp per inviare notifiche
                                                     ServerResponse resLogin = userManager.login(loginName, loginPsw);
                                                     answer.addProperty("status", resLogin.status);
                                                     answer.addProperty("message", resLogin.message);
                                                     if (resLogin.status.equals("ok")) {
                                                         session.LoggedUsername = loginName;
                                                         session.clientPort = udpPort;
-                                                        gameManager.joinCurrentGame(loginName);
+                                                        gameManager.joinCurrentGame(loginName);// se login va bene aggiungo l'utente alla partita in corso
                                                         InetSocketAddress remoteAddress = (InetSocketAddress) client
                                                                 .getRemoteAddress();
                                                         session.clInetAddress = remoteAddress.getAddress();
                                                         userManager.addSession(session);
-
                                                     }
                                                     break;
                                                 case "logout":
@@ -249,7 +244,7 @@ public class ServerMain {
                                                                 if (leaderbord.get(i).username.equals(playerName)) {
                                                                     found = true;
                                                                     answer.addProperty("status", "ok");
-                                                                    answer.addProperty("position", i + 1);
+                                                                    answer.addProperty("position", i + 1); 
                                                                     answer.addProperty("score",
                                                                             leaderbord.get(i).score);
                                                                     break;
@@ -264,7 +259,7 @@ public class ServerMain {
                                                             answer.addProperty("status", "ok");
                                                             JsonArray jsonList = new JsonArray();
                                                             for (int i = 0; i < Math.min(limit,
-                                                                    leaderbord.size()); i++) {
+                                                                    leaderbord.size()); i++) {//uso mathMin perchè se per esempio l'utente chiede i top 10 ma ci sono solo 5 giocatori nella classifica generale crasherebbe
                                                                 JsonObject lbElement = new JsonObject();
                                                                 lbElement.addProperty("username",
                                                                         leaderbord.get(i).username);

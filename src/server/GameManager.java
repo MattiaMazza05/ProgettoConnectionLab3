@@ -25,8 +25,11 @@ import java.util.Set;
 public class GameManager {
     private volatile PuzzleData.Puzzle currentPuzzle; // uso volatile per ottenere sempre la variabile più aggiornata
     private volatile long gameEndTime;
-    private final ConcurrentHashMap<String, PlayerGameState> playerState = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+    private final ConcurrentHashMap<String, PlayerGameState> playerState = new ConcurrentHashMap<>(); // mappa username
+                                                                                                      // e stato di
+                                                                                                      // gioco
+    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();// timer per il fine
+                                                                                                // partita
     private final UserManager userManager;
     private final PuzzleRepository puzzleRepo;
     private final int gameDurationSeconds;
@@ -34,7 +37,7 @@ public class GameManager {
     private List<GameRecord> gameHistory = new ArrayList<>();
     private final String historyFilePath = "data/gameHistory.json";
 
-    public GameManager(PuzzleRepository puzzleRepo, int gameDurationSeconds, UserManager userManager,
+    public GameManager(PuzzleRepository puzzleRepo, int gameDurationSeconds, UserManager userManager, // costruttore
             UdpNotifier udpNotifier) {
         this.puzzleRepo = puzzleRepo;
         this.gameDurationSeconds = gameDurationSeconds;
@@ -59,7 +62,12 @@ public class GameManager {
             }
             gameEndTime = System.currentTimeMillis() + (gameDurationSeconds * 1000L);
             System.out.println("Nuova partita avviata!");
-            timer.schedule(this::onGameEnd, gameDurationSeconds, TimeUnit.SECONDS);
+            timer.schedule(new Runnable() {// quando scade il timer eseguo onGameEnd che termina partita e invia notifiche
+                @Override
+                public void run() {
+                    onGameEnd();
+                }
+            }, gameDurationSeconds, TimeUnit.SECONDS);
         }
     }
 
@@ -253,7 +261,7 @@ public class GameManager {
             }
 
             ProposalResponse response = new ProposalResponse("ok", msg);
-            
+
             response.groupFound = matchedGroup;
             response.score = state.score;
             response.mistakes = state.mistakes;
@@ -264,11 +272,11 @@ public class GameManager {
 
     public void joinCurrentGame(String username) {
         PlayerGameState state = playerState.get(username);
-        if(state == null){//se entra per la prima volta
+        if (state == null) {// se entra per la prima volta
             state = new PlayerGameState();
             state.online = true;
             playerState.put(username, state);
-        }else{//se era uscito ed è rientrato 
+        } else {// se era uscito ed è rientrato
             state.online = true;
         }
     }
@@ -318,7 +326,7 @@ public class GameManager {
                 r.add("correctGroups", gson.toJsonTree(state.correctGroups));
                 return r;
             } else {
-                // Se la partita corrente è ormai finita globalmente
+                // Se la partita è finita globalmente
                 r.addProperty("status", "finished");
                 r.addProperty("gameId", currentPuzzle.gameId);
                 r.add("solution", gson.toJsonTree(currentPuzzle.groups));
@@ -356,53 +364,52 @@ public class GameManager {
 
     public JsonObject requestGameStats(int gameId) {
         JsonObject r = new JsonObject();
-        if (gameId != -1 && currentPuzzle != null && gameId> currentPuzzle.gameId) {
+        if (gameId != -1 && currentPuzzle != null && gameId > currentPuzzle.gameId) {
             r.addProperty("status", "error");
             r.addProperty("message", "Partita non ancora giocata.");
             return r;
         }
         if (gameId == -1 || gameId == currentPuzzle.gameId) {
             int finished = 0, winners = 0, sumScore = 0, total = 0;
-            for(PlayerGameState state : playerState.values()){
+            for (PlayerGameState state : playerState.values()) {
                 if (state.online) {
-                    total ++;
+                    total++;
                 }
                 if (state.finished) {
-                    finished ++;
+                    finished++;
                 }
                 if (state.correctGroups != null && state.correctGroups.size() == 4) {
-                    winners ++;
+                    winners++;
                 }
                 sumScore += state.score;
             }
             if (System.currentTimeMillis() < gameEndTime) {
-                r.addProperty("status", "ongoing"); 
+                r.addProperty("status", "ongoing");
                 r.addProperty("totalPlayers", total);
                 r.addProperty("finishedPlayers", finished);
                 r.addProperty("winnersCount", winners);
-                r.addProperty("timeRemaining", (gameEndTime - System.currentTimeMillis()) / 1000); 
+                r.addProperty("timeRemaining", (gameEndTime - System.currentTimeMillis()) / 1000);
                 return r;
-            }else{
+            } else {
                 r.addProperty("status", "finished");
                 r.addProperty("totalPlayers", total);
                 r.addProperty("finishedPlayers", finished);
                 r.addProperty("winnersCount", winners);
                 if (total > 0) {
-                    r.addProperty("avgScore", (double)sumScore / total);
+                    r.addProperty("avgScore", (double) sumScore / total);
                 } else {
                     r.addProperty("avgScore", 0.0);
                 }
                 return r;
             }
         }
-
+        //se è una vecchia partita 
         GameRecord record = getHistoricalgame(gameId);
         if (record == null) {
             r.addProperty("status", "error");
             r.addProperty("message", "Partita non trovata");
             return r;
         }
-        // ritorno i valori di una partita vecchia
         r.addProperty("status", "finished");
         r.addProperty("totalPlayers", record.finalStates.size());
         r.addProperty("finishedPlayers", record.finishedCount);
@@ -434,11 +441,11 @@ public class GameManager {
     public synchronized void saveHistory() {
         JsonPersistence.writeJson(historyFilePath, gameHistory);
     }
-    
-    public synchronized void leaveCurrentGame(String username){
+
+    public synchronized void leaveCurrentGame(String username) {// se l'utente fa logout lo imposto come offline
         PlayerGameState state = playerState.get(username);
-        if(state != null ){
-           state.online = false;
+        if (state != null) {
+            state.online = false;
         }
     }
 
