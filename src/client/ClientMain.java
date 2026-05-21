@@ -59,6 +59,7 @@ public class ClientMain {
             cliThread.setDaemon(true);
             cliThread.start();
             while (true) {
+               
                 selector.select();
                 String messageCli;
                 while ((messageCli = queue.poll()) != null) {

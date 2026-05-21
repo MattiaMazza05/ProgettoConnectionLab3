@@ -81,7 +81,8 @@
           }
         ],
         "score": 24,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -134,25 +135,29 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Auri": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Test": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -251,13 +256,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -310,7 +317,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -363,7 +371,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -416,7 +425,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -469,7 +479,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -522,7 +533,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -575,7 +587,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -628,7 +641,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -681,7 +695,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -734,7 +749,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -787,7 +803,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -840,7 +857,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -893,7 +911,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -946,7 +965,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -999,7 +1019,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1052,7 +1073,8 @@
         "mistakes": 4,
         "correctGroups": [],
         "score": -16,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1115,13 +1137,15 @@
           }
         ],
         "score": 6,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 1,
         "correctGroups": [],
         "score": -4,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1193,13 +1217,15 @@
           }
         ],
         "score": 12,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1289,13 +1315,15 @@
           }
         ],
         "score": 24,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1532,7 +1560,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1585,13 +1614,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1644,13 +1675,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1703,13 +1736,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1762,13 +1797,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1821,13 +1858,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1880,7 +1919,8 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,
@@ -1933,13 +1973,15 @@
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       },
       "Matti": {
         "mistakes": 0,
         "correctGroups": [],
         "score": 0,
-        "finished": true
+        "finished": true,
+        "online": true
       }
     },
     "totalPlayers": 0,

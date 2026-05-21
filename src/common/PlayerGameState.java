@@ -8,6 +8,7 @@ public class PlayerGameState {
     public List<PuzzleData.Group> correctGroups = new ArrayList<>();
     public int score = 0;
     public boolean finished = false;
+    public boolean online = true;
 
     public PlayerGameState() {
 

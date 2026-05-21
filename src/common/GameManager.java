@@ -258,7 +258,14 @@ public class GameManager {
     }
 
     public void joinCurrentGame(String username) {
-        playerState.putIfAbsent(username, new PlayerGameState());
+        PlayerGameState state = playerState.get(username);
+        if(state == null){//se entra per la prima volta
+            state = new PlayerGameState();
+            state.online = true;
+            playerState.put(username, state);
+        }else{//se era uscito ed è rientrato 
+            state.online = true;
+        }
     }
 
     public List<PuzzleData.Group> buildSolution() {
@@ -350,10 +357,11 @@ public class GameManager {
             return r;
         }
         if (gameId == -1 || gameId == currentPuzzle.gameId) {
-            int total = playerState.size();
-            int finished = 0, winners = 0, sumScore = 0;
-
+            int finished = 0, winners = 0, sumScore = 0, total = 0;
             for(PlayerGameState state : playerState.values()){
+                if (state.online) {
+                    total ++;
+                }
                 if (state.finished) {
                     finished ++;
                 }
@@ -425,7 +433,7 @@ public class GameManager {
     public synchronized void leaveCurrentGame(String username){
         PlayerGameState state = playerState.get(username);
         if(state != null ){
-           playerState.remove(username);
+           state.online = false;
         }
     }
 
