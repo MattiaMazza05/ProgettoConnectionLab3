@@ -1,4 +1,4 @@
-package common;
+package server;
 
 import java.lang.reflect.Type;
 import java.util.concurrent.ConcurrentHashMap;
@@ -6,13 +6,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
-import server.ClientSession;
+import common.JsonPersistence;
+import common.ServerResponse;
+import common.Leaderboard;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class UserManager { // classe per la gestione degli utenti e autenticazione
+public class UserManager { // classe per la gestione degli utenti e autenticazione 
     public ConcurrentHashMap<String, UserData> users = new ConcurrentHashMap<>();
     private final Set<String> loggedIn = ConcurrentHashMap.newKeySet();
     private final Set<ClientSession> activeSession = ConcurrentHashMap.newKeySet();

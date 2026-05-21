@@ -1,4 +1,4 @@
-package common;
+package server;
 
 public class UserData { //formato dati utente
     public String username;

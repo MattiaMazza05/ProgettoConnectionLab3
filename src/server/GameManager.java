@@ -1,4 +1,4 @@
-package common;
+package server;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +13,12 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import server.ClientSession;
+import common.GameEndNotification;
+import common.ProposalResponse;
+import common.JsonPersistence;
+import common.PuzzleData;
+import common.GameRecord;
+import common.ServerResponse;
 
 import java.util.Set;
 

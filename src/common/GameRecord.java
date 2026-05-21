@@ -3,6 +3,8 @@ package common;
 import java.util.List;
 import java.util.Map;
 
+import server.PlayerGameState;
+
 public class GameRecord {
     public int gameId;
     public List<PuzzleData.Group> solution;

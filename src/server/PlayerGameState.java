@@ -1,5 +1,6 @@
-package common;
+package server;
 
+import common.PuzzleData;
 import java.util.ArrayList;
 import java.util.List;
 

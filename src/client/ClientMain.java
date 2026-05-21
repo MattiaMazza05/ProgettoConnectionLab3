@@ -58,20 +58,20 @@ public class ClientMain {
             Thread cliThread = new Thread(cliTask);
             cliThread.setDaemon(true);
             cliThread.start();
+            ByteBuffer currentWriteBuffer = null; // Buffer per gestire eventuali scritture parziali
+
             while (true) {
-               
-                selector.select();
-                String messageCli;
-                while ((messageCli = queue.poll()) != null) {
-                    try {
-                        ByteBuffer writeBuffer = ByteBuffer.wrap(messageCli.getBytes("UTF-8"));
-                        while (writeBuffer.hasRemaining()) {
-                            socketChannel.write(writeBuffer);
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Errore durante l'invio del messaggio: " + e.getMessage());
+                // 1. Registra l'interesse per la scrittura nel Selector SE la coda non è vuota
+                SelectionKey channelKey = socketChannel.keyFor(selector);
+                if (channelKey != null && channelKey.isValid()) {
+                    if (!queue.isEmpty() || (currentWriteBuffer != null && currentWriteBuffer.hasRemaining())) {
+                        channelKey.interestOps(channelKey.interestOps() | SelectionKey.OP_WRITE);
+                    } else {
+                        channelKey.interestOps(channelKey.interestOps() & ~SelectionKey.OP_WRITE);
                     }
                 }
+
+                selector.select();
                 Set<SelectionKey> readyKeys = selector.selectedKeys();
                 Iterator<SelectionKey> iterator = readyKeys.iterator();
 
@@ -79,6 +79,10 @@ public class ClientMain {
                     SelectionKey key = iterator.next();
                     iterator.remove();
 
+                    if (!key.isValid())
+                        continue;
+
+                    // 2. OP_READ - Lettura dal Server (Il tuo codice rimane quasi uguale)
                     if (key.isReadable()) {
                         SocketChannel channel = (SocketChannel) key.channel();
                         int bytesRead = channel.read(readBuffer);
@@ -92,6 +96,40 @@ public class ClientMain {
                         List<String> messages = MessageReader.extractMessage(readBuffer);
                         for (String msg : messages) {
                             handleServerMessage(msg);
+                        }
+                    }
+
+                    // 3. OP_WRITE - Scrittura verso il Server controllata da NIO
+                    if (key.isWritable()) {
+                        SocketChannel channel = (SocketChannel) key.channel();
+
+                        // Preleviamo il prossimo messaggio dalla coda solo se abbiamo finito quello
+                        // precedente
+                        if (currentWriteBuffer == null || !currentWriteBuffer.hasRemaining()) {
+                            String messageCli = queue.poll();
+                            if (messageCli != null) {
+                                currentWriteBuffer = ByteBuffer.wrap(messageCli.getBytes("UTF-8"));
+                            }
+                        }
+
+                        // Scriviamo sul canale
+                        if (currentWriteBuffer != null && currentWriteBuffer.hasRemaining()) {
+                            try {
+                                channel.write(currentWriteBuffer);
+                            } catch (Exception e) {
+                                System.err.println("Errore durante l'invio del messaggio: " + e.getMessage());
+                                key.cancel();
+                                channel.close();
+                                return;
+                            }
+                        }
+
+                        // Se il buffer è vuoto e non c'è altro da inviare, rimuoviamo l'interesse
+                        // OP_WRITE
+                        if (currentWriteBuffer == null || !currentWriteBuffer.hasRemaining()) {
+                            if (queue.isEmpty()) {
+                                key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+                            }
                         }
                     }
                 }

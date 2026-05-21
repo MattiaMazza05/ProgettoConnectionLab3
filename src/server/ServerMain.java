@@ -1,10 +1,7 @@
 package server;
 
-import common.GameManager;
 import common.MessageReader;
-import common.PuzzleRepository;
 import common.ServerResponse;
-import common.UserManager;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,14 +28,14 @@ import com.google.gson.JsonParser;
 
 public class ServerMain {
     public static void main(String[] args) throws IOException {
-        Properties properties = new Properties();
+        Properties properties = new Properties(); //leggo dal file di configurazione 
         try (FileInputStream in = new FileInputStream("config/server.properties")) {
             properties.load(in);
         } catch (Exception e) {
             System.err.println("Errore: Impossibile leggere il file di configurazione");
             System.exit(1);
         }
-        int tcpPort = Integer.parseInt(properties.getProperty("tcp.port"));
+        int tcpPort = Integer.parseInt(properties.getProperty("tcp.port")); //riempio dal file di config
         int udpPort = Integer.parseInt(properties.getProperty("udp.port"));
         int gameDurationSeconds = Integer.parseInt(properties.getProperty("game.duration.seconds"));
         int persistenceInterval = Integer.parseInt(properties.getProperty("persistence.interval.seconds"));
@@ -47,7 +44,7 @@ public class ServerMain {
         userManager.load(); // carico in memoria il file utenti json
 
         PuzzleRepository puzzleRepo = new PuzzleRepository("data/Connections_Data.json");
-        common.UdpNotifier udpNotifier = new common.UdpNotifier(udpPort);
+        UdpNotifier udpNotifier = new UdpNotifier(udpPort);
         GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager, udpNotifier);
         gameManager.loadHistory(); // carico cronologia partite da json
 
