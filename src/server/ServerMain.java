@@ -158,11 +158,10 @@ public class ServerMain {
                                                     answer.addProperty("status", resp.status);
                                                     answer.addProperty("message", resp.message);
 
-                                                    if (resp.status.equals("ok") && newName != null
-                                                            && session.LoggedUsername != null) {
-                                                        if (session.LoggedUsername.equals(oldName)) {
-                                                            session.LoggedUsername = newName;
-                                                        }
+                                                    if (resp.status.equals("ok") && newName != null && session.LoggedUsername != null && session.LoggedUsername.equals(oldName)) {
+
+                                                        gameManager.updateUsername(oldName, newName); // aggiorno username nella partita in corso
+                                                        session.LoggedUsername = newName;
                                                     }
                                                     break;
                                                 case "login":

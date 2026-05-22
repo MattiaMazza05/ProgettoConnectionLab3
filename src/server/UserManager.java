@@ -136,13 +136,20 @@ public class UserManager { // classe per la gestione degli utenti e autenticazio
         if (!user.password.equals(oldPsw)) {
             return ServerResponse.err("Password errata.");
         }
-        if (newPsw != null && !newPsw.isBlank()) {
+        boolean changeName = false, changePassword = false;
+        if(newName != null && !newName.isBlank() && !newName.equals(oldName)){
+            changeName = true;
+        }
+        if(newPsw != null && !newPsw.isBlank()){
+            changePassword = true;
+        }
+        if(changeName && users.containsKey(newName)){
+            return ServerResponse.err("Nome utente già esistente, scagliene uno diverso.");
+        }
+        if(changePassword){
             user.password = newPsw;
         }
-        if (newName != null && !newName.isBlank() && !newName.equals(oldName)) {
-            if (users.containsKey(newName)) {// se viene usato un nome utente gia registrato lo segnalo
-                return ServerResponse.err("Nome utente già esistente, scagliene uno diverso.");
-            }
+        if (changeName) {
             users.remove(oldName);
             user.username = newName;
             users.put(newName, user);

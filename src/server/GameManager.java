@@ -448,4 +448,13 @@ public class GameManager {
         }
     }
 
+    public synchronized void updateUsername(String oldName, String newName){ //se un utente cambia nome aggiorno anche lo stato di gioco 
+        if(oldName == null ||oldName == null || oldName.equals(newName)){
+            return;
+        }
+        PlayerGameState state = playerState.remove(oldName);
+        if(state != null){
+            playerState.put(newName, state);
+        }
+    }
 }
