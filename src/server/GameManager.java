@@ -97,7 +97,7 @@ public class GameManager {
         gameNotification.finishedPlayers = finishedPlayers;
         gameNotification.winnersCount = winnersCount;
         if (totalPlayers > 0) {
-            gameNotification.agvScore = sumScore / totalPlayers;
+            gameNotification.agvScore = (double) sumScore / totalPlayers;
         }
         gameNotification.solution = currentPuzzle.groups;
 
@@ -449,7 +449,7 @@ public class GameManager {
     }
 
     public synchronized void updateUsername(String oldName, String newName){ //se un utente cambia nome aggiorno anche lo stato di gioco 
-        if(oldName == null ||oldName == null || oldName.equals(newName)){
+        if(oldName == null ||newName == null || oldName.equals(newName)){
             return;
         }
         PlayerGameState state = playerState.remove(oldName);
