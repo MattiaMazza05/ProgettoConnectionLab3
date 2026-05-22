@@ -1,11 +1,3 @@
----
-title: "Relazione progetto Connections"
-author: "Lab Reti 3"
-date: "21 maggio 2026"
-geometry: margin=1.55cm
-fontsize: 10pt
----
-
 # 1. Scelte progettuali
 
 Il progetto realizza una versione client-server del gioco *Connections*. La scelta principale è stata mantenere una sola partita globale attiva alla volta, gestita centralmente dal server: tutti gli utenti loggati partecipano alla stessa partita corrente e, allo scadere del tempo, il server archivia il risultato e avvia automaticamente la partita successiva.
