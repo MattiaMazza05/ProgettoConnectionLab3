@@ -87,7 +87,6 @@ public class GameManager {
             } else {
                 state.finished = true;
                 userManager.recordGameResult(username, false, state.mistakes, state.score);
-                finishedPlayers++;
             }
 
             if (state.correctGroups != null && state.correctGroups.size() == 4) {
@@ -255,7 +254,7 @@ public class GameManager {
                 userManager.recordGameResult(username, true, state.mistakes, state.score);
             }
 
-            String msg = "Corretto Tema: " + matchedGroup.theme;
+            String msg = "Proposta corretta.";
             if (state.finished) {
                 msg += "\n🎉 COMPLIMENTI! Hai indovinato tutti i gruppi! Hai completato la partita.";
             }

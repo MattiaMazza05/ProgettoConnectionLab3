@@ -2,6 +2,7 @@ package server;
 
 import common.MessageReader;
 import common.ServerResponse;
+import common.ProposalResponse;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -21,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -28,37 +30,38 @@ import com.google.gson.JsonParser;
 
 public class ServerMain {
     public static void main(String[] args) throws IOException {
-        Properties properties = new Properties(); //leggo dal file di configurazione 
+        Properties properties = new Properties(); // leggo dal file di configurazione
         try (FileInputStream in = new FileInputStream("config/server.properties")) {
             properties.load(in);
         } catch (Exception e) {
             System.err.println("Errore: Impossibile leggere il file di configurazione");
             System.exit(1);
         }
-        int tcpPort = Integer.parseInt(properties.getProperty("tcp.port")); //riempio dal file di config
+        int tcpPort = Integer.parseInt(properties.getProperty("tcp.port")); // riempio dal file di config
         int udpPort = Integer.parseInt(properties.getProperty("udp.port"));
         int gameDurationSeconds = Integer.parseInt(properties.getProperty("game.duration.seconds"));
         int persistenceInterval = Integer.parseInt(properties.getProperty("persistence.interval.seconds"));
+        String puzzlesFile = properties.getProperty("puzzles.file");
         String usersFile = properties.getProperty("users.file");
         UserManager userManager = new UserManager(usersFile); // creo oggetto di tipo UserManager
         userManager.load(); // carico in memoria il file utenti json
 
-        PuzzleRepository puzzleRepo = new PuzzleRepository("data/Connections_Data.json");
+        PuzzleRepository puzzleRepo = new PuzzleRepository(puzzlesFile);
         UdpNotifier udpNotifier = new UdpNotifier(udpPort);
         GameManager gameManager = new GameManager(puzzleRepo, gameDurationSeconds, userManager, udpNotifier);
         gameManager.loadHistory(); // carico cronologia partite da json
-
+        Gson gson = new Gson();
         int lastGameId = gameManager.getNextGameId();
-        if (lastGameId >= 0) { //imposto l'indice al gioco successivo 
+        if (lastGameId >= 0) { // imposto l'indice al gioco successivo
             puzzleRepo.setCurrentIndex(lastGameId + 1);
         }
 
         gameManager.startNewGame();
-        Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante 
+        Selector selector = Selector.open(); // apro selector e ServerSocketChannel configurandolo come non bloccante
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(false);
         serverChannel.bind(new InetSocketAddress(tcpPort));
-        serverChannel.register(selector, SelectionKey.OP_ACCEPT); //lo registro per accettare connessioni
+        serverChannel.register(selector, SelectionKey.OP_ACCEPT); // lo registro per accettare connessioni
         System.out.println("Server NIO in ascolto sulla porta " + tcpPort + "...");
         ExecutorService pool = Executors.newFixedThreadPool(10); // fisso un thread pool a 10 thread per le varie
                                                                  // operazioni
@@ -80,13 +83,17 @@ public class ServerMain {
 
         while (true) { // ciclo infinito per le richieste
             selector.select(); // server si mette in attesa
-            Set<SelectionKey> readyKeys = selector.selectedKeys();//quando arriva una richiesta prendo le chiavi pronte e le itero
+            Set<SelectionKey> readyKeys = selector.selectedKeys();// quando arriva una richiesta prendo le chiavi pronte
+                                                                  // e le itero
             Iterator<SelectionKey> iterator = readyKeys.iterator();
 
             while (iterator.hasNext()) {
                 SelectionKey key = iterator.next();
 
                 iterator.remove();
+                if (!key.isValid()) {
+                    continue;
+                }
                 try {
                     if (key.isAcceptable()) { // se la chiave è ACCEPT accetto i vari client
                         ServerSocketChannel server = (ServerSocketChannel) key.channel();
@@ -161,14 +168,19 @@ public class ServerMain {
                                                 case "login":
                                                     String loginName = request.get("username").getAsString();
                                                     String loginPsw = request.get("psw").getAsString();
-                                                    int udpPort = request.get("udpPort").getAsInt(); //prendo anche la porta udp per inviare notifiche
+                                                    int udpPort = request.get("udpPort").getAsInt(); // prendo anche la
+                                                                                                     // porta udp per
+                                                                                                     // inviare
+                                                                                                     // notifiche
                                                     ServerResponse resLogin = userManager.login(loginName, loginPsw);
                                                     answer.addProperty("status", resLogin.status);
                                                     answer.addProperty("message", resLogin.message);
                                                     if (resLogin.status.equals("ok")) {
                                                         session.LoggedUsername = loginName;
                                                         session.clientPort = udpPort;
-                                                        gameManager.joinCurrentGame(loginName);// se login va bene aggiungo l'utente alla partita in corso
+                                                        gameManager.joinCurrentGame(loginName);// se login va bene
+                                                                                               // aggiungo l'utente alla
+                                                                                               // partita in corso
                                                         InetSocketAddress remoteAddress = (InetSocketAddress) client
                                                                 .getRemoteAddress();
                                                         session.clInetAddress = remoteAddress.getAddress();
@@ -204,6 +216,16 @@ public class ServerMain {
                                                                 .submitProposal(session.LoggedUsername, words);
                                                         answer.addProperty("status", resSubmit.status);
                                                         answer.addProperty("message", resSubmit.message);
+                                                        if (resSubmit instanceof ProposalResponse) { 
+                                                            ProposalResponse proposalResponse = (ProposalResponse) resSubmit;
+                                                            answer.addProperty("score", proposalResponse.score);
+                                                            answer.addProperty("mistakes", proposalResponse.mistakes);
+                                                            answer.addProperty("won", proposalResponse.won);
+                                                            if (proposalResponse.groupFound != null) {
+                                                                answer.add("groupFound",
+                                                                        gson.toJsonTree(proposalResponse.groupFound));
+                                                            }
+                                                        }
                                                     }
                                                     break;
                                                 case "requestGameInfo":
@@ -244,7 +266,7 @@ public class ServerMain {
                                                                 if (leaderbord.get(i).username.equals(playerName)) {
                                                                     found = true;
                                                                     answer.addProperty("status", "ok");
-                                                                    answer.addProperty("position", i + 1); 
+                                                                    answer.addProperty("position", i + 1);
                                                                     answer.addProperty("score",
                                                                             leaderbord.get(i).score);
                                                                     break;
@@ -259,7 +281,12 @@ public class ServerMain {
                                                             answer.addProperty("status", "ok");
                                                             JsonArray jsonList = new JsonArray();
                                                             for (int i = 0; i < Math.min(limit,
-                                                                    leaderbord.size()); i++) {//uso mathMin perchè se per esempio l'utente chiede i top 10 ma ci sono solo 5 giocatori nella classifica generale crasherebbe
+                                                                    leaderbord.size()); i++) {// uso mathMin perchè se
+                                                                                              // per esempio l'utente
+                                                                                              // chiede i top 10 ma ci
+                                                                                              // sono solo 5 giocatori
+                                                                                              // nella classifica
+                                                                                              // generale crasherebbe
                                                                 JsonObject lbElement = new JsonObject();
                                                                 lbElement.addProperty("username",
                                                                         leaderbord.get(i).username);

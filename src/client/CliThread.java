@@ -12,7 +12,7 @@ public class CliThread implements Runnable {
     private final Selector selector;
     private final int udpPort;
 
-    public CliThread(ConcurrentLinkedQueue<String> queue, Selector selector, int udpPort) {
+    public CliThread(ConcurrentLinkedQueue<String> queue, Selector selector, int udpPort) { //costruttore
         this.selector = selector;
         this.udpPort = udpPort;
         this.queue = queue;
@@ -20,9 +20,9 @@ public class CliThread implements Runnable {
 
     @Override
     public void run() {
-        Scanner in = new Scanner(System.in);
+        Scanner in = new Scanner(System.in); 
         while (true) {
-            if (!ClientMain.isLoggedIn) {
+            if (!ClientMain.isLoggedIn) { //se non è loggato mostro il menu di login
                 System.out.println("--- Benvenuto in CONNECTION ---");
                 System.out.println("1. Registrati\n2. Login\n0. Esci");
                 String command = in.nextLine().trim();
@@ -45,7 +45,7 @@ public class CliThread implements Runnable {
                         queue.add(reqRegister.toString() + "\n");
                         selector.wakeup();
                         System.out.println("Richiesta inviata. Attendo risposta dal server...");
-                        while (ClientMain.waitingForResponse) {// il ciclo che blocca
+                        while (ClientMain.waitingForResponse) {
                             try {
                                 Thread.sleep(100);
                             } catch (InterruptedException e) {
@@ -95,7 +95,7 @@ public class CliThread implements Runnable {
                         System.out.println("Comando non valido, inserisci un comando valido!");
                         break;
                 }
-            } else {
+            } else { // se è loggato mostro il menu di gioco
                 System.out.println("--- Menu di Gioco ---");
                 System.out.println(
                         "1. Invia Proposta\n2. Info Partita\n3. Statistiche Partita\n4. Statistiche Giocatore\n5. Classifica\n6. Aggiorna Credenziali\n0. Logout");
@@ -257,8 +257,7 @@ public class CliThread implements Runnable {
                         String newName = in.nextLine().trim();
                         System.out.println("Inserisci la nuova password (lascia vuoto per non cambiarla):");
                         String newPsw = in.nextLine().trim();
-
-                        // 1. Creo il JsonObject
+                        
                         JsonObject updateReq = new JsonObject();
                         updateReq.addProperty("operation", "updateCredentials");
                         updateReq.addProperty("oldName", oldName);

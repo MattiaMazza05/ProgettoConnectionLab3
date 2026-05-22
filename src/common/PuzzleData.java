@@ -2,7 +2,7 @@ package common;
 
 import java.util.List;
 
-public class PuzzleData {
+public class PuzzleData { //classe per rappresentare i dati dei puzzle
     public List<Puzzle> puzzles;
 
     public static class Puzzle {

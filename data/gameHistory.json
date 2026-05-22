@@ -2080,5 +2080,96 @@
     "finishedCount": 0,
     "winnersCount": 0,
     "agvScore": 0.0
+  },
+  {
+    "gameId": 36,
+    "solution": [
+      {
+        "theme": "MARINE MAMMALS",
+        "words": [
+          "SEAL",
+          "DOLPHIN",
+          "OTTER",
+          "MANATEE"
+        ]
+      },
+      {
+        "theme": "BIKE PARTS",
+        "words": [
+          "SPOKE",
+          "CHAIN",
+          "SADDLE",
+          "BRAKE"
+        ]
+      },
+      {
+        "theme": "SYNONYMS FOR SELL",
+        "words": [
+          "MOVE",
+          "HAWK",
+          "PEDDLE",
+          "VEND"
+        ]
+      },
+      {
+        "theme": "COUNTRIES WHEN “A” IS ADDED",
+        "words": [
+          "CUB",
+          "CHIN",
+          "MALT",
+          "TONG"
+        ]
+      }
+    ],
+    "finalStates": {
+      "Matti": {
+        "mistakes": 0,
+        "correctGroups": [
+          {
+            "theme": "MARINE MAMMALS",
+            "words": [
+              "SEAL",
+              "DOLPHIN",
+              "OTTER",
+              "MANATEE"
+            ]
+          },
+          {
+            "theme": "BIKE PARTS",
+            "words": [
+              "SPOKE",
+              "CHAIN",
+              "SADDLE",
+              "BRAKE"
+            ]
+          },
+          {
+            "theme": "SYNONYMS FOR SELL",
+            "words": [
+              "MOVE",
+              "HAWK",
+              "PEDDLE",
+              "VEND"
+            ]
+          },
+          {
+            "theme": "COUNTRIES WHEN “A” IS ADDED",
+            "words": [
+              "CUB",
+              "CHIN",
+              "MALT",
+              "TONG"
+            ]
+          }
+        ],
+        "score": 24,
+        "finished": true,
+        "online": false
+      }
+    },
+    "totalPlayers": 0,
+    "finishedCount": 1,
+    "winnersCount": 1,
+    "agvScore": 24.0
   }
 ]

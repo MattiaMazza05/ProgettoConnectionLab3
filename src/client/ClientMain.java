@@ -20,9 +20,8 @@ import com.google.gson.JsonParser;
 import common.MessageReader;
 
 public class ClientMain {
-    public static volatile boolean isLoggedIn = false;
+    public static volatile boolean isLoggedIn = false;  //isLoggedIn tiene traccia dello stato dell'utent per ecitare che mandi comandi se non è loggato, waitingForResponse serve per evitare che mandi piu comandi contemporaneamene 
     public static volatile boolean waitingForResponse = false;
-
     public static void main(String[] args) {
         try {
             Properties config = new Properties();
@@ -32,13 +31,13 @@ public class ClientMain {
             String serverIp = config.getProperty("server.ip");
             int serverPort = Integer.parseInt(config.getProperty("server.tcp.port"));
             Selector selector = Selector.open();
-            InetSocketAddress serverAddress = new InetSocketAddress(serverIp, serverPort);
+            InetSocketAddress serverAddress = new InetSocketAddress(serverIp, serverPort); // mi connetto al server
             SocketChannel socketChannel = SocketChannel.open();
             socketChannel.configureBlocking(false);
             socketChannel.connect(serverAddress);
             socketChannel.register(selector, SelectionKey.OP_CONNECT);
 
-            while (!socketChannel.finishConnect()) {
+            while (!socketChannel.finishConnect()) {// mi assicuro che si sia connesso 
                 selector.select(100);
             }
             socketChannel.register(selector, SelectionKey.OP_READ);
@@ -48,23 +47,22 @@ public class ClientMain {
             ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
             int udpPort = -1;
-            UdpListener udpListener = new UdpListener();
+            UdpListener udpListener = new UdpListener(); 
             udpPort = udpListener.initSocket();
             Thread t = new Thread(udpListener);
             t.setDaemon(true); // setto il thread come Deamon in modo tale che quando chiudo il client venga
                                // chiuso anche questo thread
             t.start();
-            CliThread cliTask = new CliThread(queue, selector, udpPort);
+            CliThread cliTask = new CliThread(queue, selector, udpPort); // creo un thread per gestire l'input 
             Thread cliThread = new Thread(cliTask);
             cliThread.setDaemon(true);
             cliThread.start();
             ByteBuffer currentWriteBuffer = null; // Buffer per gestire eventuali scritture parziali
 
             while (true) {
-                // 1. Registra l'interesse per la scrittura nel Selector SE la coda non è vuota
                 SelectionKey channelKey = socketChannel.keyFor(selector);
                 if (channelKey != null && channelKey.isValid()) {
-                    if (!queue.isEmpty() || (currentWriteBuffer != null && currentWriteBuffer.hasRemaining())) {
+                    if (!queue.isEmpty() || (currentWriteBuffer != null && currentWriteBuffer.hasRemaining())) { //controllo il buffer e la coda, se c'è qualcosa da scrivere imposto in OP_WRITE
                         channelKey.interestOps(channelKey.interestOps() | SelectionKey.OP_WRITE);
                     } else {
                         channelKey.interestOps(channelKey.interestOps() & ~SelectionKey.OP_WRITE);
@@ -79,11 +77,11 @@ public class ClientMain {
                     SelectionKey key = iterator.next();
                     iterator.remove();
 
-                    if (!key.isValid())
+                    if (!key.isValid()){
                         continue;
+                    }
 
-                    // 2. OP_READ - Lettura dal Server (Il tuo codice rimane quasi uguale)
-                    if (key.isReadable()) {
+                    if (key.isReadable()) { 
                         SocketChannel channel = (SocketChannel) key.channel();
                         int bytesRead = channel.read(readBuffer);
 
@@ -99,20 +97,16 @@ public class ClientMain {
                         }
                     }
 
-                    // 3. OP_WRITE - Scrittura verso il Server controllata da NIO
-                    if (key.isWritable()) {
+                    if (key.isWritable()) { 
                         SocketChannel channel = (SocketChannel) key.channel();
 
-                        // Preleviamo il prossimo messaggio dalla coda solo se abbiamo finito quello
-                        // precedente
-                        if (currentWriteBuffer == null || !currentWriteBuffer.hasRemaining()) {
+                        if (currentWriteBuffer == null || !currentWriteBuffer.hasRemaining()) { //prendo il prox messaggio dalla coda se è vuota
                             String messageCli = queue.poll();
                             if (messageCli != null) {
                                 currentWriteBuffer = ByteBuffer.wrap(messageCli.getBytes("UTF-8"));
                             }
                         }
 
-                        // Scriviamo sul canale
                         if (currentWriteBuffer != null && currentWriteBuffer.hasRemaining()) {
                             try {
                                 channel.write(currentWriteBuffer);
@@ -123,9 +117,7 @@ public class ClientMain {
                                 return;
                             }
                         }
-
-                        // Se il buffer è vuoto e non c'è altro da inviare, rimuoviamo l'interesse
-                        // OP_WRITE
+                        //se il buffer è vuoto levo OP_WRITE
                         if (currentWriteBuffer == null || !currentWriteBuffer.hasRemaining()) {
                             if (queue.isEmpty()) {
                                 key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
@@ -139,7 +131,7 @@ public class ClientMain {
         }
     }
 
-    private static void handleServerMessage(String json) {
+    private static void handleServerMessage(String json) { // questo metodo interpreta i messaggi ricevuti dal server e stampa con una migliore formattazione
         try {
             JsonObject response = JsonParser.parseString(json).getAsJsonObject();
             String status = "unknown", message = "";
@@ -150,7 +142,7 @@ public class ClientMain {
                 message = response.get("message").getAsString();
             }
 
-            // messaggi generali
+            // --- MESSAGGI GENERALI ---\
             if (status.equals("ok") || status.equals("ongoing") || status.equals("finished")) {
                 if (!message.isEmpty()) {
                     System.out.println("\n[✅] -> " + message);
@@ -159,7 +151,7 @@ public class ClientMain {
                 System.out.println("\n[❌] -> " + message);
             }
 
-            // info partita
+            // --- DETTAGLI PARTITA ---
             if (response.has("gameId")) {
                 System.out.println("\n--- Info Partita ID: " + response.get("gameId").getAsInt() + " ---");
             }
@@ -183,7 +175,7 @@ public class ClientMain {
             if (response.has("mistakes")) {
                 System.out.println("- Errori 🙈: " + response.get("mistakes").getAsInt());
             }
-            // parole
+            // --- DETTAGLI PUZZLE ---
             if (response.has("words")) {
                 System.out.println("- Parole da raggruppare: " + response.get("words").getAsJsonArray().toString());
             } else if (response.has("remainingWords")) {
@@ -193,8 +185,12 @@ public class ClientMain {
             if (response.has("correctGroups")) {
                 System.out.println("- Gruppi indovinati: " + response.get("correctGroups").getAsJsonArray().toString());
             }
-
-            // leaderboard
+            if (response.has("groupFound")) {
+                JsonObject group = response.getAsJsonObject("groupFound");
+                System.out.println("- Gruppo trovato: " + group.get("theme").getAsString() + " -> "
+                        + group.get("words").getAsJsonArray().toString());
+            }
+            // --- LEADERBOARD ---
             if (response.has("position")) {
                 System.out.println("- Sei in posizione 🥇: " + response.get("position").getAsInt());
             }
@@ -208,7 +204,7 @@ public class ClientMain {
                 }
             }
 
-            // Statistiche partita
+            // --- STATISTICHE PARTITA ---
             if (response.has("totalPlayers")) {
                 System.out.println("- Giocatori totali in partita ⌛️: " + response.get("totalPlayers").getAsInt());
             }
@@ -253,7 +249,7 @@ public class ClientMain {
                         + response.get("mistakeHistogram").getAsJsonArray().toString());
             }
 
-            // gestione login/logout
+            // --- GESTIONE LOGIN/LOGOUT ---
             if (status.equals("ok")) {
                 if (json.toLowerCase().contains("loggato")) {
                     isLoggedIn = true;
@@ -263,7 +259,7 @@ public class ClientMain {
             }
         } catch (Exception e) {
             System.out.println("\n[MESSAGGIO DI RETE] -> " + json);
-        } finally {
+        } finally {// alla fine di ogni messaggio imposto waitingForResponse a falso così che il client può inviare nuovi comandi
             waitingForResponse = false;
         }
     }

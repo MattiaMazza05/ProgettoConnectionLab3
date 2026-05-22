@@ -2,7 +2,7 @@ package common;
 
 import java.util.List;
 
-public class GameEndNotification {
+public class GameEndNotification { // classe per le notifiche di fine partita
     public String type = "gameId";
     public int gameId;
     public List<PuzzleData.Group> solution;

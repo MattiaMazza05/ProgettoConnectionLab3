@@ -5,7 +5,7 @@ import java.util.Map;
 
 import server.PlayerGameState;
 
-public class GameRecord {
+public class GameRecord { //classe per le informazioni di fine partita
     public int gameId;
     public List<PuzzleData.Group> solution;
     public Map<String, PlayerGameState> finalStates;

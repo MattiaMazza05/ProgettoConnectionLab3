@@ -1,6 +1,6 @@
 package common;
 
-public class ProposalResponse extends ServerResponse{
+public class ProposalResponse extends ServerResponse{ 
     public int score;
     public int mistakes;
     public boolean won = false;

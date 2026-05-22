@@ -6,9 +6,11 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
-public class UdpListener implements Runnable {
+public class UdpListener implements Runnable { //thread per ascoltare le notifiche inviate dal server
     Gson gson = new Gson();
     DatagramSocket dS = null;
     int port = -1;
@@ -31,10 +33,10 @@ public class UdpListener implements Runnable {
             byte[] buffer = new byte[8192];
             DatagramPacket dP = new DatagramPacket(buffer, buffer.length);
             try {
-                dS.receive(dP);
-                String recivedString = new String(dP.getData(), 0, dP.getLength(), "UTF-8");
+                dS.receive(dP); 
+                String recivedString = new String(dP.getData(), 0, dP.getLength(), "UTF-8"); 
                 try {
-                    JsonObject gameEnd = com.google.gson.JsonParser.parseString(recivedString).getAsJsonObject();
+                    JsonObject gameEnd = JsonParser.parseString(recivedString).getAsJsonObject();
                     System.out.println("\n===== [NOTIFICA DAL SERVER: PARTITA TERMINATA 🔔] =====");
                     System.out.println(
                             "- Giocatori totali che hanno partecipato: " + gameEnd.get("totalPlayers").getAsInt());
@@ -44,7 +46,7 @@ public class UdpListener implements Runnable {
                     System.out.println("- Punteggio medio: " + gameEnd.get("agvScore").getAsDouble());
                     System.out.println("- LA SOLUZIONE COMPLETA ERA:");
 
-                    com.google.gson.JsonArray solutionArray = gameEnd.getAsJsonArray("solution");
+                    JsonArray solutionArray = gameEnd.getAsJsonArray("solution");
                     for (int i = 0; i < solutionArray.size(); i++) {
                         JsonObject group = solutionArray.get(i).getAsJsonObject();
                         System.out.println("  > TEMA: " + group.get("theme").getAsString() + " -> "
@@ -55,7 +57,6 @@ public class UdpListener implements Runnable {
                 } catch (Exception e) {
                     System.out.println("\n[NOTIFICA DAL SERVER]: " + recivedString);
                 }
-
             } catch (SocketTimeoutException e) {
                 continue;
             } catch (Exception e) {
